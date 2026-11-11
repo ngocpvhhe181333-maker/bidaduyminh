@@ -1,4 +1,5 @@
 import { calculateTableFee } from '../utils/pricing.js'
+import { calculateDiscount } from '../utils/discount.js'
 
 const STORAGE_KEY = 'duyminhbida_demo_state_v1'
 const AUTH_SESSION_KEY = 'duyminhbida_demo_auth_v1'
@@ -662,7 +663,7 @@ export const demoAdapter = {
     return session
   },
 
-  async checkoutSession({ sessionId, paymentMethod, note = '' }) {
+  async checkoutSession({ sessionId, paymentMethod, note = '', discountType = 'none', discountValue = 0 }) {
     const state = loadState()
     const user = requireStaff(state)
     if (paymentMethod !== 'cash' && paymentMethod !== 'transfer') {
@@ -687,6 +688,8 @@ export const demoAdapter = {
 
     const items = state.sessionItems.filter((si) => si.session_id === sessionId)
     const itemsFee = items.reduce((sum, i) => sum + i.unit_price_snapshot * i.quantity, 0)
+    const discount = calculateDiscount(calc.tableFee + itemsFee, discountType, discountValue)
+    if (!discount.valid) throw new Error('Giá trị giảm giá không hợp lệ.')
     const dateTag = endedAt.toISOString().slice(0, 10).replaceAll('-', '')
     const seq = String(state.invoices.length + 1).padStart(4, '0')
 
@@ -709,8 +712,8 @@ export const demoAdapter = {
       min_minutes_snapshot: session.min_minutes_snapshot,
       table_fee: calc.tableFee,
       items_fee: itemsFee,
-      discount_amount: 0,
-      total_amount: calc.tableFee + itemsFee,
+      discount_amount: discount.amount,
+      total_amount: calc.tableFee + itemsFee - discount.amount,
       payment_method: paymentMethod,
       cashier_id: user.id,
       cashier_name: user.full_name,
@@ -744,7 +747,7 @@ export const demoAdapter = {
     return enrichInvoice(state, invoice)
   },
 
-  async checkoutRetailSale({ items, paymentMethod, note = '' }) {
+  async checkoutRetailSale({ items, paymentMethod, note = '', discountType = 'none', discountValue = 0 }) {
     const state = loadState()
     const user = requireStaff(state)
     const openShift = state.shifts.find((shift) => shift.status === 'open')
@@ -774,6 +777,8 @@ export const demoAdapter = {
 
     const paidAt = new Date()
     const itemsFee = lines.reduce((sum, { menuItem, quantity }) => sum + menuItem.price * quantity, 0)
+    const discount = calculateDiscount(itemsFee, discountType, discountValue)
+    if (!discount.valid) throw new Error('Giá trị giảm giá không hợp lệ.')
     const dateTag = paidAt.toISOString().slice(0, 10).replaceAll('-', '')
     const seq = String(state.invoices.length + 1).padStart(4, '0')
     const invoice = {
@@ -795,8 +800,8 @@ export const demoAdapter = {
       min_minutes_snapshot: 0,
       table_fee: 0,
       items_fee: itemsFee,
-      discount_amount: 0,
-      total_amount: itemsFee,
+      discount_amount: discount.amount,
+      total_amount: itemsFee - discount.amount,
       payment_method: paymentMethod,
       cashier_id: user.id,
       cashier_name: user.full_name,

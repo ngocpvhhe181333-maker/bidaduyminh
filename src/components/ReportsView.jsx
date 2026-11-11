@@ -252,7 +252,7 @@ export function ReportsView() {
         <div className="card kpi-card">
           <span className="kpi-label">Tổng giảm giá</span>
           <strong className="kpi-big num">{formatVnd(report.discountTotal)}</strong>
-          <span className="muted-xs">Giảm giá sau thanh toán bởi Admin</span>
+          <span className="muted-xs">Giảm giá lúc thu tiền hoặc điều chỉnh bởi Admin</span>
         </div>
       </div>
 

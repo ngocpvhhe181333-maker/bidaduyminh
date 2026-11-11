@@ -289,29 +289,45 @@ export const supabaseAdapter = {
     return data
   },
 
-  async checkoutSession({ sessionId, paymentMethod, note = '' }) {
+  async checkoutSession({ sessionId, paymentMethod, note = '', discountType = 'none', discountValue = 0 }) {
     const client = requireSupabase()
-    const { data: invoice, error } = await client.rpc('checkout_session', {
+    let { data: invoice, error } = await client.rpc('checkout_session_with_discount', {
       p_session_id: sessionId,
       p_payment_method: paymentMethod,
       p_note: note,
+      p_discount_type: discountType,
+      p_discount_value: discountValue,
     })
+    if (error?.code === 'PGRST202' && discountType === 'none') {
+      ({ data: invoice, error } = await client.rpc('checkout_session', {
+        p_session_id: sessionId, p_payment_method: paymentMethod, p_note: note,
+      }))
+    }
+    if (error?.code === 'PGRST202') throw new Error('Chưa cập nhật Supabase. Hãy chạy file supabase/checkout_discount_migration.sql trong SQL Editor.')
     if (error) throw formatError(error)
     return this.fetchInvoiceDetail(invoice.id)
   },
 
-  async checkoutRetailSale({ items, paymentMethod, note = '' }) {
+  async checkoutRetailSale({ items, paymentMethod, note = '', discountType = 'none', discountValue = 0 }) {
     const client = requireSupabase()
-    const { data: invoice, error } = await client.rpc('checkout_retail_sale', {
-      p_items: items.map(({ menuItemId, quantity }) => ({
+    const rpcItems = items.map(({ menuItemId, quantity }) => ({
         menu_item_id: menuItemId,
         quantity,
-      })),
+      }))
+    let { data: invoice, error } = await client.rpc('checkout_retail_sale_with_discount', {
+      p_items: rpcItems,
       p_payment_method: paymentMethod,
       p_note: note,
+      p_discount_type: discountType,
+      p_discount_value: discountValue,
     })
+    if (error?.code === 'PGRST202' && discountType === 'none') {
+      ({ data: invoice, error } = await client.rpc('checkout_retail_sale', {
+        p_items: rpcItems, p_payment_method: paymentMethod, p_note: note,
+      }))
+    }
     if (error?.code === 'PGRST202') {
-      throw new Error('Chưa cập nhật Supabase. Hãy chạy file supabase/retail_sales_migration.sql trong SQL Editor.')
+      throw new Error('Chưa cập nhật Supabase. Hãy chạy file supabase/checkout_discount_migration.sql trong SQL Editor.')
     }
     if (error) throw formatError(error)
     return this.fetchInvoiceDetail(invoice.id)

@@ -8,7 +8,9 @@ import {
   getRoundingLabel,
 } from '../utils/format'
 import { calculateTableFee, getEffectiveTablePricing } from '../utils/pricing'
+import { calculateDiscount } from '../utils/discount'
 import { playPaymentSuccessSound } from '../utils/paymentSound'
+import { DiscountFields } from './DiscountFields'
 import { CoffeeIcon, PlusIcon, SwapIcon } from './Icons'
 
 export function TablesView({
@@ -32,6 +34,8 @@ export function TablesView({
   const [applyTargetPricing, setApplyTargetPricing] = useState(false)
   const [transferNote, setTransferNote] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('cash')
+  const [discountType, setDiscountType] = useState('none')
+  const [discountValue, setDiscountValue] = useState('')
   const [checkoutNote, setCheckoutNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -140,6 +144,8 @@ export function TablesView({
     setError('')
     setSelectedSessionId(session.id)
     setSessionTab(initialTab)
+    setDiscountType('none')
+    setDiscountValue('')
     setMenuCategory('Tất cả')
     setMenuSearch('')
     setTransferTargetId(availableTables[0]?.id || '')
@@ -207,7 +213,7 @@ export function TablesView({
 
   async function handleCheckout(e) {
     e.preventDefault()
-    if (!selectedSession) return
+    if (!selectedSession || !tableDiscount.valid) return
     setBusy(true)
     setError('')
     try {
@@ -215,8 +221,12 @@ export function TablesView({
         sessionId: selectedSession.id,
         paymentMethod,
         note: checkoutNote,
+        discountType,
+        discountValue: discountType === 'none' ? 0 : Number(discountValue || 0),
       })
       playPaymentSuccessSound()
+      setDiscountType('none')
+      setDiscountValue('')
       setSelectedSessionId(null)
       await onRefresh()
       onInvoiceCreated(invoice)
@@ -245,6 +255,8 @@ export function TablesView({
       totalFee: calc.tableFee + itemsFee,
     }
   }, [selectedSession, nowMs])
+  const tableDiscount = calculateDiscount(selectedSessionPricing?.totalFee || 0, discountType, discountValue)
+  const tableAmountDue = (selectedSessionPricing?.totalFee || 0) - tableDiscount.amount
 
   return (
     <div className="page-stack">
@@ -752,15 +764,25 @@ export function TablesView({
                         <span>Tiền đồ uống &amp; đồ ăn</span>
                         <strong className="num">{formatVnd(selectedSessionPricing.itemsFee)}</strong>
                       </div>
-                      <div className="live-row live-total">
-                        <span>TỔNG CỘNG</span>
+                      <div className="live-row">
+                        <span>Tạm tính</span>
                         <strong className="num">{formatVnd(selectedSessionPricing.totalFee)}</strong>
+                      </div>
+                      {tableDiscount.amount > 0 && <div className="live-row">
+                        <span>Giảm giá</span>
+                        <strong className="num">−{formatVnd(tableDiscount.amount)}</strong>
+                      </div>}
+                      <div className="live-row live-total">
+                        <span>Khách thanh toán</span>
+                        <strong className="num">{formatVnd(tableAmountDue)}</strong>
                       </div>
                     </div>
                   </div>
 
                   <div className="panel-box form-stack">
                     <h4>Xác nhận thu tiền</h4>
+                    <DiscountFields subtotal={selectedSessionPricing.totalFee} type={discountType} value={discountValue}
+                      onTypeChange={setDiscountType} onValueChange={setDiscountValue} disabled={busy} />
                     <div className="field">
                       <span>Phương thức thanh toán</span>
                       <div className="payment-methods">
@@ -793,10 +815,10 @@ export function TablesView({
                       />
                     </label>
 
-                    <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={busy}>
+                    <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={busy || !tableDiscount.valid}>
                       {busy
                         ? 'Đang xử lý thanh toán...'
-                        : `Xác nhận thanh toán ${formatVnd(selectedSessionPricing.totalFee)}`}
+                        : `Xác nhận thanh toán ${formatVnd(tableAmountDue)}`}
                     </button>
                     <p className="muted-xs">
                       Sau khi xác nhận, phiên chơi sẽ đóng, bàn trở về trạng thái Trống và hóa đơn được lưu vĩnh viễn.

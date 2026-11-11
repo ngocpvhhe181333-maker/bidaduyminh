@@ -23,6 +23,7 @@ Mở địa chỉ Vite hiển thị trong terminal (thường là `http://localh
 2. Vào **SQL Editor** và chạy toàn bộ nội dung file [`supabase/schema.sql`](./supabase/schema.sql) để khởi tạo các bảng, ràng buộc chống mở trùng bàn/ca, hàm tính tiền giờ, các RPC nghiệp vụ và chính sách **Row Level Security (RLS)** cho Admin và Thu ngân (kèm sẵn 5 bàn và thực đơn mẫu).
    Sau đó chạy [`supabase/retail_sales_migration.sql`](./supabase/retail_sales_migration.sql) để bật tính năng bán đồ ăn/uống cho khách không dùng bàn. Nếu bạn đã chạy `schema.sql` từ trước, **chỉ cần chạy file migration này**; dữ liệu và hóa đơn cũ được giữ lại.
    Tiếp theo chạy [`supabase/inventory_profit_migration.sql`](./supabase/inventory_profit_migration.sql) để thêm tồn kho và giá nhập. Với cơ sở dữ liệu đã có, chỉ chạy các file migration còn thiếu theo thứ tự; không cần chạy lại `schema.sql`.
+   Cuối cùng chạy [`supabase/checkout_discount_migration.sql`](./supabase/checkout_discount_migration.sql) để bật giảm giá theo phần trăm hoặc số tiền khi thanh toán bàn và bán lẻ. Nếu đã chạy các file trước, chỉ cần chạy file mới này; hóa đơn cũ được giữ nguyên.
 3. Trong mục **Connect** của project, lấy **Project URL** và **publishable key**.
 4. Sao chép `.env.example` thành `.env.local`, rồi điền hai giá trị đó.
    Nếu đã kết nối Supabase qua Vercel Integration, Vercel tự thêm `NEXT_PUBLIC_SUPABASE_URL` và `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Ứng dụng cũng đọc được hai tên biến này; không cần tạo thêm biến `VITE_` trên Vercel.
@@ -61,6 +62,8 @@ File `vercel.json` giúp các đường dẫn trong ứng dụng React hoạt đ
 Sau khi chạy migration và bản Vercel mới được triển khai, mở ca rồi vào tab **Bán lẻ**. Chọn món, số lượng và phương thức thanh toán; hóa đơn xuất hiện trong **Ca & Hóa đơn** với loại **Bán lẻ**. Tiền bán lẻ cộng vào doanh thu ca và báo cáo, nhưng không cộng vào số phiên chơi hay doanh thu giờ của bàn.
 
 ## Tồn kho và lợi nhuận
+
+- Khi thu tiền bàn chơi hoặc đơn bán lẻ, chọn **Theo %** hoặc **Số tiền** trong mục **Giảm giá cho khách**. Admin cũng có hai cách này khi điều chỉnh hóa đơn đã thanh toán. Hóa đơn lưu số tiền giảm và tổng khách thực trả; báo cáo doanh thu dùng tổng đã giảm.
 
 - Trong **Quản trị → Thực đơn**, Admin nhập giá nhập mỗi đơn vị, giá bán và số lượng tồn kho hiện tại. Để trống tồn kho nghĩa là chưa theo dõi số lượng; để trống giá nhập nghĩa là chưa tính được giá vốn.
 - Món gắn với bàn trừ kho khi gọi; giảm/xóa món trước khi thanh toán sẽ hoàn lại kho. Bán lẻ trừ kho khi thanh toán. Món hết tồn không thể bán tiếp cho tới khi Admin nhập thêm tồn kho.

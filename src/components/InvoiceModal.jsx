@@ -10,10 +10,13 @@ import {
   getRoundingLabel,
 } from '../utils/format'
 import { PrintIcon } from './Icons'
+import { calculateDiscount } from '../utils/discount'
+import { DiscountFields } from './DiscountFields'
 
 export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
   const [adjustMode, setAdjustMode] = useState(null) // 'discount' | 'edit' | 'void' | null
   const [discountAmount, setDiscountAmount] = useState(invoice.discount_amount ?? 0)
+  const [discountType, setDiscountType] = useState(invoice.discount_amount > 0 ? 'amount' : 'none')
   const [tableFee, setTableFee] = useState(invoice.table_fee ?? 0)
   const [itemsFee, setItemsFee] = useState(invoice.items_fee ?? 0)
   const [paymentMethod, setPaymentMethod] = useState(invoice.payment_method || 'cash')
@@ -24,6 +27,7 @@ export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
   function startAdjust(mode) {
     setAdjustMode(mode)
     setDiscountAmount(invoice.discount_amount ?? 0)
+    setDiscountType(invoice.discount_amount > 0 ? 'amount' : 'none')
     setTableFee(invoice.table_fee ?? 0)
     setItemsFee(invoice.items_fee ?? 0)
     setPaymentMethod(invoice.payment_method || 'cash')
@@ -33,6 +37,10 @@ export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
 
   async function handleSubmitAdjustment(e) {
     e.preventDefault()
+    if (adjustMode !== 'void' && !adjustmentDiscount.valid) {
+      setError('Giá trị giảm giá không hợp lệ.')
+      return
+    }
     if (reason.trim().length < 3) {
       setError('Vui lòng nhập lý do rõ ràng (tối thiểu 3 ký tự).')
       return
@@ -44,7 +52,7 @@ export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
         invoiceId: invoice.id,
         actionType: adjustMode,
         reason: reason.trim(),
-        discountAmount: adjustMode === 'void' ? undefined : Number(discountAmount) || 0,
+        discountAmount: adjustMode === 'void' ? undefined : adjustmentDiscount.amount,
         tableFee: adjustMode === 'edit' ? Number(tableFee) || 0 : undefined,
         itemsFee: adjustMode === 'edit' ? Number(itemsFee) || 0 : undefined,
         paymentMethod: adjustMode === 'edit' ? paymentMethod : undefined,
@@ -61,6 +69,10 @@ export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
   const items = invoice.invoice_items || []
   const adjustments = invoice.invoice_adjustments || []
   const isRetail = invoice.sale_type === 'retail' || !invoice.session_id
+  const adjustmentSubtotal = adjustMode === 'edit'
+    ? (isRetail ? 0 : Number(tableFee) || 0) + (Number(itemsFee) || 0)
+    : invoice.table_fee + invoice.items_fee
+  const adjustmentDiscount = calculateDiscount(adjustmentSubtotal, discountType, discountAmount)
 
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Chi tiết hóa đơn">
@@ -265,18 +277,11 @@ export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
                       </>
                     )}
 
-                    {(adjustMode === 'discount' || adjustMode === 'edit') && (
-                      <label className="field">
-                        <span>Số tiền giảm giá (VNĐ)</span>
-                        <input
-                          type="number"
-                          min={0}
-                          step={1000}
-                          value={discountAmount}
-                          onChange={(e) => setDiscountAmount(e.target.value)}
-                        />
-                      </label>
-                    )}
+                    {(adjustMode === 'discount' || adjustMode === 'edit') && <>
+                      <DiscountFields subtotal={adjustmentSubtotal} type={discountType} value={discountAmount}
+                        onTypeChange={setDiscountType} onValueChange={setDiscountAmount} disabled={saving} />
+                      <div className="live-row live-total"><span>Tổng sau giảm</span><strong className="num">{formatVnd(adjustmentSubtotal - adjustmentDiscount.amount)}</strong></div>
+                    </>}
 
                     {adjustMode === 'void' && (
                       <div className="alert alert-warning">

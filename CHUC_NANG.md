@@ -60,6 +60,7 @@
 | Xem hóa đơn và doanh thu ca của mình | Có | Có |
 | Xem toàn bộ báo cáo | Có | Không |
 | Sửa giá, bàn, thực đơn | Có | Không |
+| Giảm giá khi thu tiền | Có | Có |
 | Giảm giá, hủy/sửa giao dịch đã thanh toán | Có | Không |
 | Quản lý tài khoản | Có | Không |
 

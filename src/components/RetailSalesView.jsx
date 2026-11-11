@@ -1,13 +1,17 @@
 import { useMemo, useState } from 'react'
 import { api } from '../services/api'
 import { formatVnd } from '../utils/format'
+import { calculateDiscount } from '../utils/discount'
 import { playPaymentSuccessSound } from '../utils/paymentSound'
+import { DiscountFields } from './DiscountFields'
 
 export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvoiceCreated, onRefresh }) {
   const [cart, setCart] = useState({})
   const [category, setCategory] = useState('Tất cả')
   const [search, setSearch] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('cash')
+  const [discountType, setDiscountType] = useState('none')
+  const [discountValue, setDiscountValue] = useState('')
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -23,6 +27,8 @@ export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvo
     .filter((item) => cart[item.id] > 0)
     .map((item) => ({ ...item, quantity: cart[item.id] })), [menuItems, cart])
   const total = lines.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const discount = calculateDiscount(total, discountType, discountValue)
+  const amountDue = total - discount.amount
 
   function changeQuantity(id, delta) {
     setCart((current) => {
@@ -37,7 +43,7 @@ export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvo
 
   async function handleCheckout(event) {
     event.preventDefault()
-    if (!openShift || lines.length === 0 || busy) return
+    if (!openShift || lines.length === 0 || busy || !discount.valid) return
     setBusy(true)
     setError('')
     try {
@@ -45,10 +51,14 @@ export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvo
         items: lines.map((item) => ({ menuItemId: item.id, quantity: item.quantity })),
         paymentMethod,
         note,
+        discountType,
+        discountValue: discountType === 'none' ? 0 : Number(discountValue || 0),
       })
       playPaymentSuccessSound()
       setCart({})
       setNote('')
+      setDiscountType('none')
+      setDiscountValue('')
       onInvoiceCreated(invoice)
       await onRefresh()
     } catch (err) {
@@ -120,8 +130,13 @@ export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvo
           )}
 
           <div className="summary-divider">
-            <div className="live-row live-total"><span>Tổng thanh toán</span><strong className="num">{formatVnd(total)}</strong></div>
+            <div className="live-row"><span>Tạm tính</span><strong className="num">{formatVnd(total)}</strong></div>
+            {discount.amount > 0 && <div className="live-row"><span>Giảm giá</span><strong className="num">−{formatVnd(discount.amount)}</strong></div>}
+            <div className="live-row live-total"><span>Khách thanh toán</span><strong className="num">{formatVnd(amountDue)}</strong></div>
           </div>
+
+          <DiscountFields subtotal={total} type={discountType} value={discountValue}
+            onTypeChange={setDiscountType} onValueChange={setDiscountValue} disabled={busy} />
 
           <div className="field">
             <span>Phương thức thanh toán</span>
@@ -137,8 +152,8 @@ export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvo
             <span>Ghi chú hóa đơn (tùy chọn)</span>
             <input type="text" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Ví dụ: Mang về" />
           </label>
-          <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={busy || !openShift || lines.length === 0}>
-            {busy ? 'Đang thanh toán...' : `Xác nhận thu ${formatVnd(total)}`}
+          <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={busy || !openShift || lines.length === 0 || !discount.valid}>
+            {busy ? 'Đang thanh toán...' : `Xác nhận thu ${formatVnd(amountDue)}`}
           </button>
         </form>
       </div>
