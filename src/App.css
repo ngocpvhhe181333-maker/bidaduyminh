@@ -1008,6 +1008,23 @@
   overflow-wrap: anywhere;
 }
 
+.transfer-qr-compact {
+  gap: 0.3rem;
+  padding: 0.55rem 0.25rem;
+  border: 0;
+  background: transparent;
+  font-size: 0.82rem;
+}
+
+.transfer-qr-compact img {
+  width: min(160px, 100%);
+}
+
+.transfer-qr-caption {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
 /* Tables & Filters */
 .filter-bar {
   display: grid;
@@ -1390,5 +1407,10 @@
   .transfer-qr {
     break-inside: avoid;
     background: #fff;
+  }
+
+  .transfer-qr-compact img {
+    width: 38mm;
+    max-width: 100%;
   }
 }

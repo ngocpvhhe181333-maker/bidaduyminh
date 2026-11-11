@@ -87,7 +87,7 @@ export function PaymentPreview({ tableName, startedAt, endedAt, durationSeconds,
           {note && <div className="receipt-note">Ghi chú: {note}</div>}
         </div>
 
-        {needsQr && <TransferQr amount={amountDue} memo={memo} onGenerated={onQrGenerated} />}
+        {needsQr && <TransferQr amount={amountDue} memo={memo} compact onGenerated={onQrGenerated} />}
         <div className="receipt-footer">Vui lòng thanh toán trước khi rời quán.</div>
       </div>
 

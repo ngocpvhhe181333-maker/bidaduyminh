@@ -214,7 +214,7 @@ export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
               {invoiceNote && <div className="receipt-note">Ghi chú: {invoiceNote}</div>}
             </div>
 
-            {needsReceiptQr && <TransferQr amount={invoice.total_amount} memo={receiptMemo} onReceipt onGenerated={onQrGenerated} />}
+            {needsReceiptQr && <TransferQr amount={invoice.total_amount} memo={receiptMemo} onReceipt compact onGenerated={onQrGenerated} />}
 
             <div className="receipt-footer">Cảm ơn quý khách &amp; Hẹn gặp lại!</div>
           </div>
