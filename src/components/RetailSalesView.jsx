@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { api } from '../services/api'
 import { formatVnd } from '../utils/format'
+import { playPaymentSuccessSound } from '../utils/paymentSound'
 
 export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvoiceCreated, onRefresh }) {
   const [cart, setCart] = useState({})
@@ -45,6 +46,7 @@ export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvo
         paymentMethod,
         note,
       })
+      playPaymentSuccessSound()
       setCart({})
       setNote('')
       onInvoiceCreated(invoice)

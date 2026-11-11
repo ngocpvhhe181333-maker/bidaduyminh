@@ -8,6 +8,7 @@ import {
   getRoundingLabel,
 } from '../utils/format'
 import { calculateTableFee, getEffectiveTablePricing } from '../utils/pricing'
+import { playPaymentSuccessSound } from '../utils/paymentSound'
 import { CoffeeIcon, PlusIcon, SwapIcon } from './Icons'
 
 export function TablesView({
@@ -215,6 +216,7 @@ export function TablesView({
         paymentMethod,
         note: checkoutNote,
       })
+      playPaymentSuccessSound()
       setSelectedSessionId(null)
       await onRefresh()
       onInvoiceCreated(invoice)
