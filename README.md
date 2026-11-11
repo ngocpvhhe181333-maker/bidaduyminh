@@ -1,4 +1,6 @@
-# bidaNgocP
+# bidaduyminh
+
+Repository: https://github.com/ngocpvhhe181333-maker/bidaduyminh
 
 Ứng dụng quản lý quán bi-a 5 bàn, 1 nhân viên. Giao diện dùng React JavaScript + Vite; dự kiến dùng Supabase cho dữ liệu và đăng nhập, Vercel để triển khai. Xem [danh sách chức năng](./CHUC_NANG.md).
 
@@ -33,7 +35,7 @@ Biến có tiền tố `VITE_` được đưa vào mã chạy trên trình duy�
 ## Triển khai bằng Vercel
 
 1. Đăng nhập [Vercel](https://vercel.com/) và chọn **Add New → Project**.
-2. Import repository GitHub `bidaNgocP`.
+2. Import repository GitHub `ngocpvhhe181333-maker/bidaduyminh`.
 3. Chọn framework **Vite**; build command `npm run build`; output directory `dist`.
 4. Trong **Environment Variables**, thêm `VITE_SUPABASE_URL` và `VITE_SUPABASE_PUBLISHABLE_KEY` giống `.env.local`.
 5. Deploy. Khi đổi biến môi trường, triển khai lại để bản build mới nhận giá trị.
