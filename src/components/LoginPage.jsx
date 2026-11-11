@@ -68,8 +68,9 @@ export function LoginPage({ onAuthenticated }) {
 
         {isDemoMode && (
           <div className="alert alert-warning">
-            <strong>Chế độ dùng thử cục bộ (Demo):</strong> Chưa phát hiện cấu hình Supabase trong{' '}
-            <code>.env.local</code>. Dữ liệu được lưu tạm trên trình duyệt để bạn trải nghiệm ngay toàn bộ chức năng.
+            <strong>Chế độ dùng thử (Demo):</strong> Bản build chưa nhận được URL và publishable key của
+            Supabase. Khi chạy trên máy, kiểm tra <code>.env.local</code>; trên Vercel, kiểm tra Environment
+            Variables rồi triển khai lại. Dữ liệu Demo chỉ lưu trong trình duyệt.
           </div>
         )}
 
