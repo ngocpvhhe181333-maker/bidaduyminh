@@ -1,0 +1,9 @@
+.app {
+  width: min(100% - 2rem, 960px);
+  margin: 0 auto;
+  padding: 4rem 0;
+}
+
+.app h1 {
+  margin: 0 0 1rem;
+}
