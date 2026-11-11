@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../services/api'
+import { allocateInvoiceToTables } from '../utils/reportTableAllocation'
 import {
   formatDateOnly,
   formatDateTime,
@@ -15,7 +16,7 @@ export function ReportsView() {
     return toLocalDateInputValue(d)
   })
   const [endDate, setEndDate] = useState(() => toLocalDateInputValue())
-  const [data, setData] = useState({ invoices: [], shifts: [], tables: [] })
+  const [data, setData] = useState({ invoices: [], shifts: [], tables: [], transfers: [] })
   const [loadedRange, setLoadedRange] = useState('')
   const [error, setError] = useState('')
 
@@ -80,6 +81,11 @@ export function ReportsView() {
     }
     const byDayMap = {}
     const byTableMap = {}
+    const transfersBySession = new Map()
+    for (const transfer of data.transfers || []) {
+      if (!transfersBySession.has(transfer.session_id)) transfersBySession.set(transfer.session_id, [])
+      transfersBySession.get(transfer.session_id).push(transfer)
+    }
 
     for (const t of data.tables) {
       byTableMap[t.id] = {
@@ -128,23 +134,25 @@ export function ReportsView() {
 
       if (inv.sale_type === 'retail' || !inv.table_id) continue
 
-      if (!byTableMap[inv.table_id]) {
-        byTableMap[inv.table_id] = {
-          tableId: inv.table_id,
-          tableName: inv.table_name,
-          sessionsCount: 0,
-          totalSeconds: 0,
-          billedMinutes: 0,
-          tableFee: 0,
-          itemsFee: 0,
+      for (const portion of allocateInvoiceToTables(inv, transfersBySession.get(inv.session_id) || [])) {
+        if (!byTableMap[portion.tableId]) {
+          byTableMap[portion.tableId] = {
+            tableId: portion.tableId,
+            tableName: portion.tableName,
+            sessionsCount: 0,
+            totalSeconds: 0,
+            billedMinutes: 0,
+            tableFee: 0,
+            itemsFee: 0,
+          }
         }
+        const tblRow = byTableMap[portion.tableId]
+        tblRow.sessionsCount += 1
+        tblRow.totalSeconds += portion.totalSeconds
+        tblRow.billedMinutes += portion.billedMinutes
+        tblRow.tableFee += portion.tableFee
+        tblRow.itemsFee += portion.itemsFee
       }
-      const tblRow = byTableMap[inv.table_id]
-      tblRow.sessionsCount += 1
-      tblRow.totalSeconds += inv.duration_seconds
-      tblRow.billedMinutes += inv.billed_minutes
-      tblRow.tableFee += inv.table_fee
-      tblRow.itemsFee += inv.items_fee
     }
 
     const byDay = Object.values(byDayMap).sort((a, b) => b.dayKey.localeCompare(a.dayKey))
@@ -279,13 +287,14 @@ export function ReportsView() {
       ) : (
         <>
           <div className="card">
-            <h3>Số phiên chơi &amp; thời gian sử dụng từng bàn</h3>
+            <h3>Số lượt sử dụng &amp; thời gian từng bàn</h3>
+            <p className="muted-xs">Phiên chuyển bàn được tính một lượt cho mỗi bàn đã sử dụng; thời gian và tiền giờ phân bổ theo thời gian thực tế. Tiền món ghi ở bàn thanh toán.</p>
             <div className="table-wrap">
               <table className="data-table">
                 <thead>
                   <tr>
                     <th>Bàn</th>
-                    <th className="num">Số phiên</th>
+                    <th className="num">Số lượt</th>
                     <th className="num">Tổng thời gian chơi</th>
                     <th className="num">Thời gian tính tiền</th>
                     <th className="num">Doanh thu giờ</th>
@@ -354,6 +363,7 @@ export function ReportsView() {
 
           <div className="card">
             <h3>Doanh thu theo ca làm</h3>
+            <p className="muted-xs">Chỉ tính hóa đơn thanh toán trong khoảng ngày đã chọn; ca mở từ hôm trước vẫn hiện nếu có hóa đơn trong khoảng này.</p>
             {report.byShift.length === 0 ? (
               <p className="muted-sm">Chưa có ca làm nào trong khoảng thời gian đã chọn.</p>
             ) : (

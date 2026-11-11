@@ -39,6 +39,16 @@ function buildDateRangeIso(startDate, endDate) {
   return { startIso, endIso }
 }
 
+async function fetchAllPages(makeQuery, pageSize = 500) {
+  const rows = []
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await makeQuery().range(offset, offset + pageSize - 1)
+    if (error) throw formatError(error)
+    rows.push(...(data || []))
+    if (!data || data.length < pageSize) return rows
+  }
+}
+
 export const supabaseAdapter = {
   mode: 'supabase',
 
@@ -377,36 +387,58 @@ export const supabaseAdapter = {
     const client = requireSupabase()
     const { startIso, endIso } = buildDateRangeIso(startDate, endDate)
 
-    let invQuery = client
-      .from('invoices')
-      .select('*, invoice_items(purchase_price_snapshot, line_cost)')
-      .order('paid_at', { ascending: false })
-      .limit(2000)
-    if (startIso) invQuery = invQuery.gte('paid_at', startIso)
-    if (endIso) invQuery = invQuery.lte('paid_at', endIso)
+    const makeInvoiceQuery = () => {
+      let query = client
+        .from('invoices')
+        .select('*, invoice_items(purchase_price_snapshot, line_cost)')
+        .order('paid_at', { ascending: false })
+        .order('id', { ascending: false })
+      if (startIso) query = query.gte('paid_at', startIso)
+      if (endIso) query = query.lte('paid_at', endIso)
+      return query
+    }
+    const makeOpenedShiftQuery = () => {
+      let query = client.from('shifts').select('*').order('opened_at', { ascending: false }).order('id', { ascending: false })
+      if (startIso) query = query.gte('opened_at', startIso)
+      if (endIso) query = query.lte('opened_at', endIso)
+      return query
+    }
 
-    let shiftQuery = client
-      .from('shifts')
-      .select('*')
-      .order('opened_at', { ascending: false })
-      .limit(300)
-    if (startIso) shiftQuery = shiftQuery.gte('opened_at', startIso)
-    if (endIso) shiftQuery = shiftQuery.lte('opened_at', endIso)
-
-    const [invRes, shiftRes, tablesRes] = await Promise.all([
-      invQuery,
-      shiftQuery,
+    const [invoices, openedShifts, tablesRes] = await Promise.all([
+      fetchAllPages(makeInvoiceQuery),
+      fetchAllPages(makeOpenedShiftQuery),
       client.from('billiard_tables').select('*').order('table_number', { ascending: true }),
     ])
+    if (tablesRes.error) throw formatError(tablesRes.error)
 
-    for (const res of [invRes, shiftRes, tablesRes]) {
-      if (res.error) throw formatError(res.error)
+    const shiftsById = new Map(openedShifts.map((shift) => [shift.id, shift]))
+    const missingShiftIds = [...new Set(invoices.map((invoice) => invoice.shift_id))]
+      .filter((id) => id && !shiftsById.has(id))
+    for (let i = 0; i < missingShiftIds.length; i += 100) {
+      const batch = missingShiftIds.slice(i, i + 100)
+      const { data, error } = await client.from('shifts').select('*').in('id', batch)
+      if (error) throw formatError(error)
+      for (const shift of data || []) shiftsById.set(shift.id, shift)
+    }
+
+    const sessionIds = [...new Set(invoices.map((invoice) => invoice.session_id))].filter(Boolean)
+    const transfers = []
+    for (let i = 0; i < sessionIds.length; i += 100) {
+      const batch = sessionIds.slice(i, i + 100)
+      const rows = await fetchAllPages(() => client
+        .from('session_transfers')
+        .select('id, session_id, from_table_id, from_table_name, to_table_id, to_table_name, transferred_at')
+        .in('session_id', batch)
+        .order('transferred_at', { ascending: true })
+        .order('id', { ascending: true }))
+      transfers.push(...rows)
     }
 
     return {
-      invoices: invRes.data || [],
-      shifts: shiftRes.data || [],
+      invoices,
+      shifts: [...shiftsById.values()].sort((a, b) => new Date(b.opened_at) - new Date(a.opened_at)),
       tables: tablesRes.data || [],
+      transfers,
     }
   },
 

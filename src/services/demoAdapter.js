@@ -963,20 +963,26 @@ export const demoAdapter = {
     const startMs = startDate ? new Date(`${startDate}T00:00:00`).getTime() : null
     const endMs = endDate ? new Date(`${endDate}T23:59:59.999`).getTime() : null
 
+    const invoices = state.invoices.filter((inv) => {
+      const ms = new Date(inv.paid_at).getTime()
+      if (startMs && ms < startMs) return false
+      if (endMs && ms > endMs) return false
+      return true
+    }).map((inv) => enrichInvoice(state, inv))
+    const invoiceShiftIds = new Set(invoices.map((inv) => inv.shift_id))
+    const invoiceSessionIds = new Set(invoices.map((inv) => inv.session_id))
+
     return {
-      invoices: state.invoices.filter((inv) => {
-        const ms = new Date(inv.paid_at).getTime()
-        if (startMs && ms < startMs) return false
-        if (endMs && ms > endMs) return false
-        return true
-      }).map((inv) => enrichInvoice(state, inv)),
+      invoices,
       shifts: state.shifts.filter((sh) => {
+        if (invoiceShiftIds.has(sh.id)) return true
         const ms = new Date(sh.opened_at).getTime()
         if (startMs && ms < startMs) return false
         if (endMs && ms > endMs) return false
         return true
       }),
       tables: [...state.tables].sort((a, b) => a.table_number - b.table_number),
+      transfers: state.sessionTransfers.filter((transfer) => invoiceSessionIds.has(transfer.session_id)),
     }
   },
 
