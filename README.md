@@ -73,8 +73,8 @@ Sau khi chạy migration và bản Vercel mới được triển khai, mở ca r
 
 ## QR chuyển khoản
 
-- Chọn **Chuyển khoản** khi thanh toán bàn hoặc bán lẻ để hiện mã VietQR cho Techcombank (TCB), tài khoản `1999222299999`, chủ tài khoản **DONG DUY MINH**. Mã lấy đúng số tiền sau giảm giá và được tạo offline bằng thư viện `vietqr`, không cần API key.
-- Thu ngân kiểm tra tiền đã vào tài khoản rồi bấm xác nhận thanh toán. QR không tự xác nhận giao dịch ngân hàng.
+- Chọn **Chuyển khoản** khi thanh toán bàn hoặc bán lẻ để hiện mã VietQR cho Techcombank (TCB), tài khoản `1999222299999`, chủ tài khoản **DONG DUY MINH**. Mỗi hóa đơn có nội dung chuyển khoản riêng; mã lấy đúng số tiền sau giảm giá, được tạo offline bằng thư viện `vietqr` và cũng hiện trên hóa đơn in.
+- Thu ngân kiểm tra tiền đã vào tài khoản rồi bấm **Xác nhận đã nhận chuyển khoản**. Âm báo phát sau khi lưu hóa đơn thành công. QR không tự xác nhận giao dịch ngân hàng.
 
 ## Lệnh hữu ích
 

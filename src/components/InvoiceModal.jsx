@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { api } from '../services/api'
 import {
   formatDateTime,
@@ -11,7 +11,9 @@ import {
 } from '../utils/format'
 import { PrintIcon } from './Icons'
 import { calculateDiscount } from '../utils/discount'
+import { parseTransferNote, transferMemo } from '../utils/transferReference'
 import { DiscountFields } from './DiscountFields'
+import { TransferQr } from './TransferQr'
 
 export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
   const [adjustMode, setAdjustMode] = useState(null) // 'discount' | 'edit' | 'void' | null
@@ -23,6 +25,7 @@ export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
   const [reason, setReason] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [printedQrKey, setPrintedQrKey] = useState('')
 
   function startAdjust(mode) {
     setAdjustMode(mode)
@@ -69,6 +72,11 @@ export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
   const items = invoice.invoice_items || []
   const adjustments = invoice.invoice_adjustments || []
   const isRetail = invoice.sale_type === 'retail' || !invoice.session_id
+  const { reference: transferReference, note: invoiceNote } = parseTransferNote(invoice.note)
+  const receiptMemo = transferMemo(transferReference || invoice.invoice_code.replaceAll('-', ''))
+  const needsReceiptQr = invoice.payment_method === 'transfer' && invoice.status !== 'voided' && invoice.total_amount > 0
+  const receiptQrKey = `${invoice.id}|${invoice.total_amount}|${receiptMemo}`
+  const onQrGenerated = useCallback(() => setPrintedQrKey(receiptQrKey), [receiptQrKey])
   const adjustmentSubtotal = adjustMode === 'edit'
     ? (isRetail ? 0 : Number(tableFee) || 0) + (Number(itemsFee) || 0)
     : invoice.table_fee + invoice.items_fee
@@ -85,9 +93,9 @@ export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
             </span>
           </div>
           <div className="row-actions">
-            <button type="button" className="btn btn-primary" onClick={() => window.print()}>
+            <button type="button" className="btn btn-primary" disabled={needsReceiptQr && printedQrKey !== receiptQrKey} onClick={() => window.print()}>
               <PrintIcon size={16} />
-              <span>In hóa đơn</span>
+              <span>{needsReceiptQr && printedQrKey !== receiptQrKey ? 'Đang tạo QR...' : 'In hóa đơn'}</span>
             </button>
             <button type="button" className="btn btn-ghost" onClick={onClose}>
               Đóng
@@ -203,8 +211,10 @@ export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
                 <span>TỔNG THANH TOÁN</span>
                 <span className="num">{formatVnd(invoice.total_amount)}</span>
               </div>
-              {invoice.note && <div className="receipt-note">Ghi chú: {invoice.note}</div>}
+              {invoiceNote && <div className="receipt-note">Ghi chú: {invoiceNote}</div>}
             </div>
+
+            {needsReceiptQr && <TransferQr amount={invoice.total_amount} memo={receiptMemo} onReceipt onGenerated={onQrGenerated} />}
 
             <div className="receipt-footer">Cảm ơn quý khách &amp; Hẹn gặp lại!</div>
           </div>

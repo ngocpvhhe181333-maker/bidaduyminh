@@ -3,6 +3,7 @@ import { api } from '../services/api'
 import { formatVnd } from '../utils/format'
 import { calculateDiscount } from '../utils/discount'
 import { playPaymentSuccessSound } from '../utils/paymentSound'
+import { createTransferReference, noteWithTransferReference, transferMemo } from '../utils/transferReference'
 import { DiscountFields } from './DiscountFields'
 import { TransferQr } from './TransferQr'
 
@@ -11,6 +12,7 @@ export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvo
   const [category, setCategory] = useState('Tất cả')
   const [search, setSearch] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('cash')
+  const [transferReference, setTransferReference] = useState(createTransferReference)
   const [discountType, setDiscountType] = useState('none')
   const [discountValue, setDiscountValue] = useState('')
   const [note, setNote] = useState('')
@@ -51,13 +53,14 @@ export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvo
       const invoice = await api.checkoutRetailSale({
         items: lines.map((item) => ({ menuItemId: item.id, quantity: item.quantity })),
         paymentMethod,
-        note,
+        note: paymentMethod === 'transfer' ? noteWithTransferReference(note, transferReference) : note,
         discountType,
         discountValue: discountType === 'none' ? 0 : Number(discountValue || 0),
       })
       playPaymentSuccessSound()
       setCart({})
       setNote('')
+      setTransferReference(createTransferReference())
       setDiscountType('none')
       setDiscountValue('')
       onInvoiceCreated(invoice)
@@ -149,14 +152,16 @@ export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvo
             </div>
           </div>
 
-          {paymentMethod === 'transfer' && <TransferQr amount={amountDue} memo="BIDA BAN LE" />}
+          {paymentMethod === 'transfer' && <TransferQr amount={amountDue} memo={transferMemo(transferReference)} />}
 
           <label className="field">
             <span>Ghi chú hóa đơn (tùy chọn)</span>
             <input type="text" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Ví dụ: Mang về" />
           </label>
           <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={busy || !openShift || lines.length === 0 || !discount.valid}>
-            {busy ? 'Đang thanh toán...' : `Xác nhận thu ${formatVnd(amountDue)}`}
+            {busy ? 'Đang thanh toán...' : paymentMethod === 'transfer'
+              ? `Xác nhận đã nhận chuyển khoản ${formatVnd(amountDue)}`
+              : `Xác nhận thu ${formatVnd(amountDue)}`}
           </button>
         </form>
       </div>

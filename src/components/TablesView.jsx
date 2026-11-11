@@ -10,6 +10,7 @@ import {
 import { calculateTableFee, getEffectiveTablePricing } from '../utils/pricing'
 import { calculateDiscount } from '../utils/discount'
 import { playPaymentSuccessSound } from '../utils/paymentSound'
+import { noteWithTransferReference, referenceFromSessionId, transferMemo } from '../utils/transferReference'
 import { DiscountFields } from './DiscountFields'
 import { TransferQr } from './TransferQr'
 import { CoffeeIcon, PlusIcon, SwapIcon } from './Icons'
@@ -221,7 +222,9 @@ export function TablesView({
       const invoice = await api.checkoutSession({
         sessionId: selectedSession.id,
         paymentMethod,
-        note: checkoutNote,
+        note: paymentMethod === 'transfer'
+          ? noteWithTransferReference(checkoutNote, referenceFromSessionId(selectedSession.id))
+          : checkoutNote,
         discountType,
         discountValue: discountType === 'none' ? 0 : Number(discountValue || 0),
       })
@@ -806,7 +809,7 @@ export function TablesView({
                       </div>
                     </div>
 
-                    {paymentMethod === 'transfer' && <TransferQr amount={tableAmountDue} memo={`BIDA BAN ${selectedSession.table_name_snapshot.match(/\d+/)?.[0] || ''}`} />}
+                    {paymentMethod === 'transfer' && <TransferQr amount={tableAmountDue} memo={transferMemo(referenceFromSessionId(selectedSession.id))} />}
 
                     <label className="field">
                       <span>Ghi chú hóa đơn (tùy chọn)</span>
@@ -821,7 +824,9 @@ export function TablesView({
                     <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={busy || !tableDiscount.valid}>
                       {busy
                         ? 'Đang xử lý thanh toán...'
-                        : `Xác nhận thanh toán ${formatVnd(tableAmountDue)}`}
+                        : paymentMethod === 'transfer'
+                          ? `Xác nhận đã nhận chuyển khoản ${formatVnd(tableAmountDue)}`
+                          : `Xác nhận thanh toán ${formatVnd(tableAmountDue)}`}
                     </button>
                     <p className="muted-xs">
                       Sau khi xác nhận, phiên chơi sẽ đóng, bàn trở về trạng thái Trống và hóa đơn được lưu vĩnh viễn.
