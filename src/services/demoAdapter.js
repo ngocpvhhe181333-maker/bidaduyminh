@@ -439,7 +439,7 @@ export const demoAdapter = {
     const openShift = state.shifts.find((s) => s.status === 'open') || null
     const openShiftSummary = openShift ? computeShiftSummaryFromState(state, openShift.id) : null
     const openSessions = state.sessions
-      .filter((s) => s.status === 'open')
+      .filter((s) => s.status === 'open' || s.status === 'pending')
       .map((s) => ({
         ...s,
         session_items: state.sessionItems.filter((si) => si.session_id === s.id),
@@ -663,6 +663,21 @@ export const demoAdapter = {
     return session
   },
 
+  async stopTableSession({ sessionId }) {
+    const state = loadState()
+    requireStaff(state)
+    const session = state.sessions.find((s) => s.id === sessionId)
+    if (!session || !['open', 'pending'].includes(session.status)) {
+      throw new Error('Phiên chơi không tồn tại hoặc đã thanh toán.')
+    }
+    if (session.status === 'open') {
+      session.status = 'pending'
+      session.ended_at = new Date().toISOString()
+      saveState(state)
+    }
+    return session
+  },
+
   async checkoutSession({ sessionId, paymentMethod, note = '', discountType = 'none', discountValue = 0 }) {
     const state = loadState()
     const user = requireStaff(state)
@@ -673,10 +688,11 @@ export const demoAdapter = {
     if (!openShift) {
       throw new Error('Chưa có ca làm đang mở. Vui lòng mở ca trước khi thu tiền.')
     }
-    const session = state.sessions.find((s) => s.id === sessionId && s.status === 'open')
+    const session = state.sessions.find((s) => s.id === sessionId && ['open', 'pending'].includes(s.status))
     if (!session) throw new Error('Phiên chơi không tồn tại hoặc đã thanh toán.')
 
-    const endedAt = new Date()
+    const endedAt = session.ended_at ? new Date(session.ended_at) : new Date()
+    const paidAt = new Date()
     const calc = calculateTableFee({
       startedAt: session.started_at,
       endedAt,
@@ -690,7 +706,7 @@ export const demoAdapter = {
     const itemsFee = items.reduce((sum, i) => sum + i.unit_price_snapshot * i.quantity, 0)
     const discount = calculateDiscount(calc.tableFee + itemsFee, discountType, discountValue)
     if (!discount.valid) throw new Error('Giá trị giảm giá không hợp lệ.')
-    const dateTag = endedAt.toISOString().slice(0, 10).replaceAll('-', '')
+    const dateTag = paidAt.toISOString().slice(0, 10).replaceAll('-', '')
     const seq = String(state.invoices.length + 1).padStart(4, '0')
 
     const invoice = {
@@ -717,7 +733,7 @@ export const demoAdapter = {
       payment_method: paymentMethod,
       cashier_id: user.id,
       cashier_name: user.full_name,
-      paid_at: endedAt.toISOString(),
+      paid_at: paidAt.toISOString(),
       status: 'paid',
       note: note.trim() || session.notes || '',
     }

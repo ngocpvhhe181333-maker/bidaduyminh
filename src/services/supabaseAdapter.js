@@ -172,7 +172,7 @@ export const supabaseAdapter = {
       client
         .from('sessions')
         .select('*, session_items(*), session_transfers(*)')
-        .eq('status', 'open')
+        .in('status', ['open', 'pending'])
         .order('started_at', { ascending: true }),
       client.from('shifts').select('*').eq('status', 'open').maybeSingle(),
     ])
@@ -285,6 +285,14 @@ export const supabaseAdapter = {
       p_apply_target_pricing: Boolean(applyTargetPricing),
       p_note: note,
     })
+    if (error) throw formatError(error)
+    return data
+  },
+
+  async stopTableSession({ sessionId }) {
+    const client = requireSupabase()
+    const { data, error } = await client.rpc('stop_table_session', { p_session_id: sessionId })
+    if (error?.code === 'PGRST202') throw new Error('Chưa cập nhật Supabase. Hãy chạy file supabase/stop_table_before_payment_migration.sql trong SQL Editor.')
     if (error) throw formatError(error)
     return data
   },

@@ -11,9 +11,9 @@
 
 ### 1. Màn hình 5 bàn
 
-- Hiển thị rõ từng bàn: **Trống**, **Đang chơi** hoặc **Bảo trì**.
+- Hiển thị rõ từng bàn: **Trống**, **Đang chơi**, **Chờ thanh toán** hoặc **Bảo trì**.
 - Bàn đang chơi hiển thị giờ bắt đầu, thời gian đã chơi và số tiền tạm tính.
-- Thu ngân mở phiên chơi từ bàn trống và kết thúc phiên khi khách thanh toán.
+- Thu ngân mở phiên chơi từ bàn trống; khi kết thúc bàn, hệ thống chốt giờ và lập hóa đơn xem trước, sau đó mới hiện QR và xác nhận thu tiền.
 - Không cho mở hai phiên chơi đồng thời trên cùng một bàn.
 
 ### 2. Tính tiền giờ

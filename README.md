@@ -24,6 +24,7 @@ Mở địa chỉ Vite hiển thị trong terminal (thường là `http://localh
    Sau đó chạy [`supabase/retail_sales_migration.sql`](./supabase/retail_sales_migration.sql) để bật tính năng bán đồ ăn/uống cho khách không dùng bàn. Nếu bạn đã chạy `schema.sql` từ trước, **chỉ cần chạy file migration này**; dữ liệu và hóa đơn cũ được giữ lại.
    Tiếp theo chạy [`supabase/inventory_profit_migration.sql`](./supabase/inventory_profit_migration.sql) để thêm tồn kho và giá nhập. Với cơ sở dữ liệu đã có, chỉ chạy các file migration còn thiếu theo thứ tự; không cần chạy lại `schema.sql`.
    Cuối cùng chạy [`supabase/checkout_discount_migration.sql`](./supabase/checkout_discount_migration.sql) để bật giảm giá theo phần trăm hoặc số tiền khi thanh toán bàn và bán lẻ. Nếu đã chạy các file trước, chỉ cần chạy file mới này; hóa đơn cũ được giữ nguyên.
+   Chạy tiếp [`supabase/stop_table_before_payment_migration.sql`](./supabase/stop_table_before_payment_migration.sql) để kết thúc bàn, chốt giờ và hiện QR theo số tiền cố định trước khi xác nhận đã nhận tiền. Nếu đã chạy các file trước, chỉ cần chạy file này.
 3. Trong mục **Connect** của project, lấy **Project URL** và **publishable key**.
 4. Sao chép `.env.example` thành `.env.local`, rồi điền hai giá trị đó.
    Nếu đã kết nối Supabase qua Vercel Integration, Vercel tự thêm `NEXT_PUBLIC_SUPABASE_URL` và `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Ứng dụng cũng đọc được hai tên biến này; không cần tạo thêm biến `VITE_` trên Vercel.
@@ -75,6 +76,7 @@ Sau khi chạy migration và bản Vercel mới được triển khai, mở ca r
 
 - Chọn **Chuyển khoản** khi thanh toán bàn hoặc bán lẻ để hiện mã VietQR cho Techcombank (TCB), tài khoản `1999222299999`, chủ tài khoản **DONG DUY MINH**. Mỗi hóa đơn có nội dung chuyển khoản riêng; mã lấy đúng số tiền sau giảm giá, được tạo offline bằng thư viện `vietqr` và cũng hiện trên hóa đơn in.
 - Thu ngân kiểm tra tiền đã vào tài khoản rồi bấm **Xác nhận đã nhận chuyển khoản**. Âm báo phát sau khi lưu hóa đơn thành công. QR không tự xác nhận giao dịch ngân hàng.
+- Với bàn chơi, bấm **Kết thúc bàn & chốt hóa đơn** trước; giờ chơi dừng, bàn chuyển sang **Chờ thanh toán**, rồi mới hiện hóa đơn và QR. Bàn chỉ trở về **Trống** sau khi thu tiền thành công.
 
 ## Lệnh hữu ích
 

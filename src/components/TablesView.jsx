@@ -72,6 +72,7 @@ export function TablesView({
   const stats = useMemo(() => {
     let available = 0
     let playing = 0
+    let pending = 0
     let maintenance = 0
     let provisionalTotal = 0
 
@@ -79,12 +80,13 @@ export function TablesView({
       if (t.status === 'available') available += 1
       else if (t.status === 'maintenance') maintenance += 1
       else if (t.status === 'playing') {
-        playing += 1
         const s = sessionByTableId[t.id]
         if (s) {
+          if (s.status === 'pending') pending += 1
+          else playing += 1
           const calc = calculateTableFee({
             startedAt: s.started_at,
-            endedAt: nowMs,
+            endedAt: s.ended_at || nowMs,
             hourlyRate: s.hourly_rate_snapshot,
             roundingMinutes: s.rounding_minutes_snapshot,
             roundingMode: s.rounding_mode_snapshot,
@@ -98,7 +100,7 @@ export function TablesView({
         }
       }
     }
-    return { available, playing, maintenance, provisionalTotal }
+    return { available, playing, pending, maintenance, provisionalTotal }
   }, [tables, sessionByTableId, nowMs])
 
   const activeMenuItems = useMemo(() => {
@@ -145,7 +147,7 @@ export function TablesView({
   function openSessionWorkspace(session, initialTab = 'order') {
     setError('')
     setSelectedSessionId(session.id)
-    setSessionTab(initialTab)
+    setSessionTab(session.status === 'pending' ? 'checkout' : initialTab)
     setDiscountType('none')
     setDiscountValue('')
     setMenuCategory('Tất cả')
@@ -215,7 +217,7 @@ export function TablesView({
 
   async function handleCheckout(e) {
     e.preventDefault()
-    if (!selectedSession || !tableDiscount.valid) return
+    if (!selectedSession || selectedSession.status !== 'pending' || !tableDiscount.valid) return
     setBusy(true)
     setError('')
     try {
@@ -241,11 +243,26 @@ export function TablesView({
     }
   }
 
+  async function handleStopSession() {
+    if (!selectedSession || selectedSession.status !== 'open' || busy) return
+    setBusy(true)
+    setError('')
+    try {
+      await api.stopTableSession({ sessionId: selectedSession.id })
+      await onRefresh()
+      setSessionTab('checkout')
+    } catch (err) {
+      setError(err.message || 'Không thể kết thúc bàn.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const selectedSessionPricing = useMemo(() => {
     if (!selectedSession) return null
     const calc = calculateTableFee({
       startedAt: selectedSession.started_at,
-      endedAt: nowMs,
+      endedAt: selectedSession.ended_at || nowMs,
       hourlyRate: selectedSession.hourly_rate_snapshot,
       roundingMinutes: selectedSession.rounding_minutes_snapshot,
       roundingMode: selectedSession.rounding_mode_snapshot,
@@ -287,6 +304,10 @@ export function TablesView({
           <strong className="kpi-value text-green">{stats.available} bàn</strong>
         </div>
         <div className="kpi-chip">
+          <span className="kpi-label">Chờ thanh toán</span>
+          <strong className="kpi-value">{stats.pending} bàn</strong>
+        </div>
+        <div className="kpi-chip">
           <span className="kpi-label">Bảo trì</span>
           <strong className="kpi-value text-muted">{stats.maintenance} bàn</strong>
         </div>
@@ -301,6 +322,7 @@ export function TablesView({
           const pricing = getEffectiveTablePricing(table, tableTypesMap)
           const session = sessionByTableId[table.id]
           const isPlaying = table.status === 'playing' && session
+          const isPending = session?.status === 'pending'
           const isMaintenance = table.status === 'maintenance'
 
           let liveCalc = null
@@ -310,7 +332,7 @@ export function TablesView({
           if (isPlaying) {
             liveCalc = calculateTableFee({
               startedAt: session.started_at,
-              endedAt: nowMs,
+              endedAt: session.ended_at || nowMs,
               hourlyRate: session.hourly_rate_snapshot,
               roundingMinutes: session.rounding_minutes_snapshot,
               roundingMode: session.rounding_mode_snapshot,
@@ -336,7 +358,7 @@ export function TablesView({
                   {table.status === 'available'
                     ? 'Trống'
                     : table.status === 'playing'
-                      ? 'Đang chơi'
+                      ? isPending ? 'Chờ thanh toán' : 'Đang chơi'
                       : 'Bảo trì'}
                 </span>
               </div>
@@ -359,7 +381,7 @@ export function TablesView({
                     <strong className="num">{formatTimeOnly(session.started_at)}</strong>
                   </div>
                   <div className="live-row">
-                    <span>Thời gian chơi</span>
+                    <span>{isPending ? 'Thời gian đã chốt' : 'Thời gian chơi'}</span>
                     <strong className="timer-badge num">{formatDurationHms(liveCalc.durationSeconds)}</strong>
                   </div>
                   <div className="live-row">
@@ -403,20 +425,20 @@ export function TablesView({
 
                 {isPlaying && (
                   <>
-                    <button
+                    {!isPending && <button
                       type="button"
                       className="btn btn-outline"
                       onClick={() => openSessionWorkspace(session, 'order')}
                     >
                       <CoffeeIcon size={16} />
                       <span>Gọi món / Chi tiết</span>
-                    </button>
+                    </button>}
                     <button
                       type="button"
                       className="btn btn-primary"
                       onClick={() => openSessionWorkspace(session, 'checkout')}
                     >
-                      Thanh toán
+                      {isPending ? 'Hóa đơn & thu tiền' : 'Kết thúc bàn'}
                     </button>
                   </>
                 )}
@@ -509,6 +531,7 @@ export function TablesView({
               <button
                 type="button"
                 className={`tab-pill ${sessionTab === 'order' ? 'active' : ''}`}
+                disabled={selectedSession.status === 'pending'}
                 onClick={() => {
                   setSessionTab('order')
                   setError('')
@@ -519,6 +542,7 @@ export function TablesView({
               <button
                 type="button"
                 className={`tab-pill ${sessionTab === 'transfer' ? 'active' : ''}`}
+                disabled={selectedSession.status === 'pending'}
                 onClick={() => {
                   setSessionTab('transfer')
                   setTransferTargetId(availableTables[0]?.id || '')
@@ -535,7 +559,7 @@ export function TablesView({
                   setError('')
                 }}
               >
-                Thanh toán ({formatVnd(selectedSessionPricing.totalFee)})
+                {selectedSession.status === 'pending' ? 'Hóa đơn & thanh toán' : 'Kết thúc bàn'} ({formatVnd(selectedSessionPricing.totalFee)})
               </button>
             </div>
 
@@ -735,7 +759,16 @@ export function TablesView({
                 </form>
               )}
 
-              {sessionTab === 'checkout' && (
+              {sessionTab === 'checkout' && (selectedSession.status !== 'pending' ? (
+                <div className="panel-box form-stack">
+                  <h4>Kết thúc bàn để lập hóa đơn</h4>
+                  <p className="muted-sm">Bàn vẫn đang tính giờ. Hãy kết thúc bàn để chốt thời gian và số tiền; sau đó hóa đơn cùng mã QR chuyển khoản mới xuất hiện.</p>
+                  <div className="live-row"><span>Tạm tính hiện tại</span><strong className="num">{formatVnd(selectedSessionPricing.totalFee)}</strong></div>
+                  <button type="button" className="btn btn-primary btn-lg" disabled={busy} onClick={handleStopSession}>
+                    {busy ? 'Đang kết thúc bàn...' : 'Kết thúc bàn & chốt hóa đơn'}
+                  </button>
+                </div>
+              ) : (
                 <form onSubmit={handleCheckout} className="checkout-layout">
                   <div className="panel-box">
                     <h4>Xem trước hóa đơn thanh toán</h4>
@@ -768,6 +801,10 @@ export function TablesView({
                         <span>Tiền đồ uống &amp; đồ ăn</span>
                         <strong className="num">{formatVnd(selectedSessionPricing.itemsFee)}</strong>
                       </div>
+                      {(selectedSession.session_items || []).map((item) => <div className="live-row" key={item.id}>
+                        <span>{item.item_name_snapshot} × {item.quantity}</span>
+                        <span className="num">{formatVnd(item.unit_price_snapshot * item.quantity)}</span>
+                      </div>)}
                       <div className="live-row">
                         <span>Tạm tính</span>
                         <strong className="num">{formatVnd(selectedSessionPricing.totalFee)}</strong>
@@ -833,7 +870,7 @@ export function TablesView({
                     </p>
                   </div>
                 </form>
-              )}
+              ))}
             </div>
           </div>
         </div>
