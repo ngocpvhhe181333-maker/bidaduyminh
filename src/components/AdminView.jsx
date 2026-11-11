@@ -459,6 +459,8 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
                   name: '',
                   category: 'Đồ uống',
                   unit: 'Lon',
+                  purchase_price: '',
+                  stock_quantity: 0,
                   price: 15000,
                   is_active: true,
                   sort_order: menuItems.length + 1,
@@ -477,6 +479,10 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
                   <th>Nhóm</th>
                   <th>Đơn vị</th>
                   <th className="num">Giá bán</th>
+                  <th className="num">Giá nhập</th>
+                  <th className="num">Tồn kho</th>
+                  <th className="num">Giá trị tồn</th>
+                  <th className="num">Lãi gộp/món</th>
                   <th>Trạng thái</th>
                   <th></th>
                 </tr>
@@ -492,9 +498,13 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
                     <td className="num">
                       <strong>{formatVnd(m.price)}</strong>
                     </td>
+                    <td className="num">{m.purchase_price == null ? 'Chưa nhập' : formatVnd(m.purchase_price)}</td>
+                    <td className="num">{m.stock_quantity == null ? 'Chưa theo dõi' : `${m.stock_quantity} ${m.unit}`}</td>
+                    <td className="num">{m.stock_quantity == null || m.purchase_price == null ? '—' : formatVnd(m.stock_quantity * m.purchase_price)}</td>
+                    <td className="num">{m.purchase_price == null ? '—' : formatVnd(m.price - m.purchase_price)}</td>
                     <td>
-                      <span className={`status-pill ${m.is_active ? 'status-available' : 'status-closed'}`}>
-                        {m.is_active ? 'Còn bán' : 'Ngừng bán'}
+                      <span className={`status-pill ${m.is_active && m.stock_quantity !== 0 ? 'status-available' : 'status-closed'}`}>
+                        {!m.is_active ? 'Ngừng bán' : m.stock_quantity === 0 ? 'Hết hàng' : 'Còn bán'}
                       </span>
                     </td>
                     <td>
@@ -826,6 +836,28 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
                   placeholder="Lon, Chai, Ly, Đĩa..."
                   value={menuModal.unit}
                   onChange={(e) => setMenuModal({ ...menuModal, unit: e.target.value })}
+                />
+              </label>
+              <label className="field">
+                <span>Giá nhập mỗi {menuModal.unit || 'phần'} (VNĐ)</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1000}
+                  placeholder="Nhập giá vốn để tính lãi"
+                  value={menuModal.purchase_price ?? ''}
+                  onChange={(e) => setMenuModal({ ...menuModal, purchase_price: e.target.value })}
+                />
+              </label>
+              <label className="field">
+                <span>Số lượng tồn kho hiện tại (để trống nếu chưa theo dõi)</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  placeholder="Ví dụ: 24"
+                  value={menuModal.stock_quantity ?? ''}
+                  onChange={(e) => setMenuModal({ ...menuModal, stock_quantity: e.target.value })}
                 />
               </label>
               <label className="field">

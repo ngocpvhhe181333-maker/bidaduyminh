@@ -640,12 +640,13 @@ export function TablesView({
                             key={m.id}
                             type="button"
                             className="menu-pick-btn"
-                            disabled={busy}
+                            disabled={busy || (m.stock_quantity != null && m.stock_quantity < 1)}
                             onClick={() => handleAddMenuItem(m.id)}
                           >
                             <span className="menu-pick-name">{m.name}</span>
                             <span className="menu-pick-meta">
                               <strong className="num">{formatVnd(m.price)}</strong> / {m.unit}
+                              {m.stock_quantity != null && ` • Còn ${m.stock_quantity}`}
                             </span>
                           </button>
                         ))

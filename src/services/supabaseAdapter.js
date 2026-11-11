@@ -401,7 +401,7 @@ export const supabaseAdapter = {
 
     let invQuery = client
       .from('invoices')
-      .select('*')
+      .select('*, invoice_items(purchase_price_snapshot, line_cost)')
       .order('paid_at', { ascending: false })
       .limit(2000)
     if (startIso) invQuery = invQuery.gte('paid_at', startIso)
@@ -415,13 +415,22 @@ export const supabaseAdapter = {
     if (startIso) shiftQuery = shiftQuery.gte('opened_at', startIso)
     if (endIso) shiftQuery = shiftQuery.lte('opened_at', endIso)
 
-    const [invRes, shiftRes, tablesRes] = await Promise.all([
+    let expensesQuery = client
+      .from('operating_expenses')
+      .select('*')
+      .order('spent_at', { ascending: false })
+      .limit(1000)
+    if (startIso) expensesQuery = expensesQuery.gte('spent_at', startIso)
+    if (endIso) expensesQuery = expensesQuery.lte('spent_at', endIso)
+
+    const [invRes, shiftRes, tablesRes, expensesRes] = await Promise.all([
       invQuery,
       shiftQuery,
       client.from('billiard_tables').select('*').order('table_number', { ascending: true }),
+      expensesQuery,
     ])
 
-    for (const res of [invRes, shiftRes, tablesRes]) {
+    for (const res of [invRes, shiftRes, tablesRes, expensesRes]) {
       if (res.error) throw formatError(res.error)
     }
 
@@ -429,7 +438,29 @@ export const supabaseAdapter = {
       invoices: invRes.data || [],
       shifts: shiftRes.data || [],
       tables: tablesRes.data || [],
+      expenses: expensesRes.data || [],
     }
+  },
+
+  async saveExpense({ id, spentAt, category, description, amount }) {
+    const client = requireSupabase()
+    const body = {
+      spent_at: spentAt,
+      category: category.trim(),
+      description: description.trim(),
+      amount: Number(amount),
+    }
+    if (id) {
+      const { data, error } = await client.from('operating_expenses').update(body).eq('id', id).select().single()
+      if (error) throw formatError(error)
+      return data
+    }
+    const { data: authData, error: authError } = await client.auth.getUser()
+    if (authError || !authData.user) throw new Error('Vui lòng đăng nhập lại.')
+    const { data, error } = await client.from('operating_expenses')
+      .insert({ ...body, created_by: authData.user.id }).select().single()
+    if (error) throw formatError(error)
+    return data
   },
 
   async saveTableType(payload) {
@@ -514,6 +545,8 @@ export const supabaseAdapter = {
       category: payload.category || 'Đồ uống',
       unit: payload.unit.trim() || 'Phần',
       price: Number(payload.price) || 0,
+      purchase_price: payload.purchase_price === '' || payload.purchase_price == null ? null : Number(payload.purchase_price),
+      stock_quantity: payload.stock_quantity === '' || payload.stock_quantity == null ? null : Number(payload.stock_quantity),
       is_active: payload.is_active !== false,
       sort_order: Number(payload.sort_order) || 0,
     }

@@ -29,6 +29,7 @@
 - Thu ngân thêm hoặc bỏ món khỏi phiên chơi trước khi thanh toán.
 - Hóa đơn thể hiện riêng tiền giờ chơi, từng món và tổng tiền.
 - Khách không chơi bi-a vẫn có thể mua món qua tab **Bán lẻ**; đơn này không cần mở bàn, nhưng cần ca làm đang mở và được tính vào doanh thu ca.
+- Admin nhập giá nhập, giá bán và tồn kho của từng món; hệ thống trừ kho khi bán và lưu giá vốn trên hóa đơn để tính lãi.
 
 ### 4. Thanh toán và hóa đơn
 
@@ -49,6 +50,7 @@
 - Doanh thu theo ngày và theo ca; tách tiền giờ chơi và tiền bán món.
 - Số phiên chơi và tổng thời gian sử dụng của từng bàn.
 - Danh sách hóa đơn, có lọc theo ngày, bàn và phương thức thanh toán.
+- Lãi gộp từ doanh thu trừ giá vốn món; lãi ròng trừ thêm chi phí vận hành được Admin nhập.
 
 ### 7. Đăng nhập và phân quyền
 
@@ -73,4 +75,4 @@ Quyền phải được kiểm tra ở Supabase, không chỉ ẩn nút trên gi
 
 ## Để sau bản đầu tiên
 
-Quản lý tồn kho chi tiết, khách hàng thân thiết, khuyến mãi tự động và tích hợp máy in chuyên dụng chỉ cần bổ sung khi quán thực sự sử dụng.
+Khách hàng thân thiết, khuyến mãi tự động và tích hợp máy in chuyên dụng chỉ cần bổ sung khi quán thực sự sử dụng.

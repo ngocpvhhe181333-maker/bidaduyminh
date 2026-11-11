@@ -133,16 +133,16 @@ function createInitialState() {
       },
     ],
     menuItems: [
-      { id: 'menu-1', name: 'Sting dâu', category: 'Đồ uống', unit: 'Chai', price: 15000, is_active: true, sort_order: 1 },
-      { id: 'menu-2', name: 'Bò húc (Red Bull)', category: 'Đồ uống', unit: 'Lon', price: 20000, is_active: true, sort_order: 2 },
-      { id: 'menu-3', name: 'Coca-Cola', category: 'Đồ uống', unit: 'Lon', price: 15000, is_active: true, sort_order: 3 },
-      { id: 'menu-4', name: 'Nước suối Aquafina', category: 'Đồ uống', unit: 'Chai', price: 10000, is_active: true, sort_order: 4 },
-      { id: 'menu-5', name: 'Trà chanh', category: 'Đồ uống', unit: 'Ly', price: 12000, is_active: true, sort_order: 5 },
-      { id: 'menu-6', name: 'Cà phê sữa đá', category: 'Đồ uống', unit: 'Ly', price: 22000, is_active: true, sort_order: 6 },
-      { id: 'menu-7', name: 'Mì tôm trứng', category: 'Đồ ăn', unit: 'Tô', price: 25000, is_active: true, sort_order: 7 },
-      { id: 'menu-8', name: 'Mì xào bò', category: 'Đồ ăn', unit: 'Đĩa', price: 45000, is_active: true, sort_order: 8 },
-      { id: 'menu-9', name: 'Khoai tây chiên', category: 'Đồ ăn', unit: 'Đĩa', price: 35000, is_active: true, sort_order: 9 },
-      { id: 'menu-10', name: 'Khăn lạnh', category: 'Khác', unit: 'Cái', price: 3000, is_active: true, sort_order: 10 },
+      { id: 'menu-1', name: 'Sting dâu', category: 'Đồ uống', unit: 'Chai', price: 15000, purchase_price: 9000, stock_quantity: 24, is_active: true, sort_order: 1 },
+      { id: 'menu-2', name: 'Bò húc (Red Bull)', category: 'Đồ uống', unit: 'Lon', price: 20000, purchase_price: 13000, stock_quantity: 24, is_active: true, sort_order: 2 },
+      { id: 'menu-3', name: 'Coca-Cola', category: 'Đồ uống', unit: 'Lon', price: 15000, purchase_price: 9000, stock_quantity: 24, is_active: true, sort_order: 3 },
+      { id: 'menu-4', name: 'Nước suối Aquafina', category: 'Đồ uống', unit: 'Chai', price: 10000, purchase_price: 5000, stock_quantity: 24, is_active: true, sort_order: 4 },
+      { id: 'menu-5', name: 'Trà chanh', category: 'Đồ uống', unit: 'Ly', price: 12000, purchase_price: 4000, stock_quantity: 20, is_active: true, sort_order: 5 },
+      { id: 'menu-6', name: 'Cà phê sữa đá', category: 'Đồ uống', unit: 'Ly', price: 22000, purchase_price: 7000, stock_quantity: 20, is_active: true, sort_order: 6 },
+      { id: 'menu-7', name: 'Mì tôm trứng', category: 'Đồ ăn', unit: 'Tô', price: 25000, purchase_price: 12000, stock_quantity: 15, is_active: true, sort_order: 7 },
+      { id: 'menu-8', name: 'Mì xào bò', category: 'Đồ ăn', unit: 'Đĩa', price: 45000, purchase_price: 26000, stock_quantity: 12, is_active: true, sort_order: 8 },
+      { id: 'menu-9', name: 'Khoai tây chiên', category: 'Đồ ăn', unit: 'Đĩa', price: 35000, purchase_price: 17000, stock_quantity: 15, is_active: true, sort_order: 9 },
+      { id: 'menu-10', name: 'Khăn lạnh', category: 'Khác', unit: 'Cái', price: 3000, purchase_price: 1000, stock_quantity: 30, is_active: true, sort_order: 10 },
     ],
     shifts: [
       {
@@ -228,6 +228,7 @@ function createInitialState() {
         item_name_snapshot: 'Sting dâu',
         unit_snapshot: 'Chai',
         unit_price_snapshot: 15000,
+      purchase_price_snapshot: 9000,
         quantity: 2,
         added_by: cashierId,
         created_at: started45mAgo,
@@ -272,11 +273,14 @@ function createInitialState() {
         item_name: 'Bò húc (Red Bull)',
         unit: 'Lon',
         unit_price: 20000,
+        purchase_price_snapshot: 13000,
+        line_cost: 26000,
         quantity: 2,
         line_total: 40000,
       },
     ],
     invoiceAdjustments: [],
+    operatingExpenses: [],
   }
 }
 
@@ -562,9 +566,13 @@ export const demoAdapter = {
     if (!menu.is_active) throw new Error(`Món "${menu.name}" đã ngừng bán.`)
 
     const qty = Math.max(1, Number(quantity) || 1)
+    if (menu.stock_quantity != null && menu.stock_quantity < qty) {
+      throw new Error(`Món "${menu.name}" không đủ tồn kho.`)
+    }
     const existing = state.sessionItems.find(
-      (si) => si.session_id === sessionId && si.menu_item_id === menuItemId && si.unit_price_snapshot === menu.price
+      (si) => si.session_id === sessionId && si.menu_item_id === menuItemId && si.unit_price_snapshot === menu.price && si.purchase_price_snapshot === (menu.purchase_price ?? null)
     )
+    if (menu.stock_quantity != null) menu.stock_quantity -= qty
     if (existing) {
       existing.quantity += qty
       saveState(state)
@@ -577,6 +585,7 @@ export const demoAdapter = {
       item_name_snapshot: menu.name,
       unit_snapshot: menu.unit,
       unit_price_snapshot: menu.price,
+      purchase_price_snapshot: menu.purchase_price ?? null,
       quantity: qty,
       added_by: user.id,
       created_at: new Date().toISOString(),
@@ -596,10 +605,17 @@ export const demoAdapter = {
     if (!session || session.status !== 'open') {
       throw new Error('Phiên chơi đã đóng.')
     }
-    if (!quantity || quantity <= 0) {
+    const menu = state.menuItems.find((m) => m.id === item.menu_item_id)
+    const nextQuantity = Math.max(0, Number(quantity) || 0)
+    const delta = nextQuantity - item.quantity
+    if (menu?.stock_quantity != null && delta > menu.stock_quantity) {
+      throw new Error(`Món "${menu.name}" không đủ tồn kho.`)
+    }
+    if (menu?.stock_quantity != null) menu.stock_quantity -= delta
+    if (nextQuantity === 0) {
       state.sessionItems.splice(idx, 1)
     } else {
-      item.quantity = Number(quantity)
+      item.quantity = nextQuantity
     }
     saveState(state)
   },
@@ -713,6 +729,8 @@ export const demoAdapter = {
         item_name: si.item_name_snapshot,
         unit: si.unit_snapshot,
         unit_price: si.unit_price_snapshot,
+        purchase_price_snapshot: si.purchase_price_snapshot ?? null,
+        line_cost: si.purchase_price_snapshot == null ? null : si.purchase_price_snapshot * si.quantity,
         quantity: si.quantity,
         line_total: si.unit_price_snapshot * si.quantity,
       })
@@ -743,6 +761,17 @@ export const demoAdapter = {
       }
       return { menuItem, quantity }
     })
+
+    const neededByMenu = new Map()
+    for (const { menuItem, quantity } of lines) {
+      neededByMenu.set(menuItem.id, (neededByMenu.get(menuItem.id) || 0) + quantity)
+    }
+    for (const [menuItemId, quantity] of neededByMenu) {
+      const menuItem = state.menuItems.find((item) => item.id === menuItemId)
+      if (menuItem.stock_quantity != null && menuItem.stock_quantity < quantity) {
+        throw new Error(`Món "${menuItem.name}" không đủ tồn kho.`)
+      }
+    }
 
     const paidAt = new Date()
     const itemsFee = lines.reduce((sum, { menuItem, quantity }) => sum + menuItem.price * quantity, 0)
@@ -786,9 +815,15 @@ export const demoAdapter = {
         item_name: menuItem.name,
         unit: menuItem.unit,
         unit_price: menuItem.price,
+        purchase_price_snapshot: menuItem.purchase_price ?? null,
+        line_cost: menuItem.purchase_price == null ? null : menuItem.purchase_price * quantity,
         quantity,
         line_total: menuItem.price * quantity,
       })
+    }
+    for (const [menuItemId, quantity] of neededByMenu) {
+      const menuItem = state.menuItems.find((item) => item.id === menuItemId)
+      if (menuItem.stock_quantity != null) menuItem.stock_quantity -= quantity
     }
     saveState(state)
     return enrichInvoice(state, invoice)
@@ -939,7 +974,7 @@ export const demoAdapter = {
         if (startMs && ms < startMs) return false
         if (endMs && ms > endMs) return false
         return true
-      }),
+      }).map((inv) => enrichInvoice(state, inv)),
       shifts: state.shifts.filter((sh) => {
         const ms = new Date(sh.opened_at).getTime()
         if (startMs && ms < startMs) return false
@@ -947,7 +982,37 @@ export const demoAdapter = {
         return true
       }),
       tables: [...state.tables].sort((a, b) => a.table_number - b.table_number),
+      expenses: (state.operatingExpenses || []).filter((expense) => {
+        const ms = new Date(expense.spent_at).getTime()
+        if (startMs && ms < startMs) return false
+        if (endMs && ms > endMs) return false
+        return true
+      }).sort((a, b) => new Date(b.spent_at).getTime() - new Date(a.spent_at).getTime()),
     }
+  },
+
+  async saveExpense({ id, spentAt, category, description, amount }) {
+    const state = loadState()
+    const user = requireAdmin(state)
+    const value = Number(amount)
+    if (!Number.isInteger(value) || value <= 0 || !category.trim()) {
+      throw new Error('Danh mục và số tiền chi phải hợp lệ.')
+    }
+    if (!state.operatingExpenses) state.operatingExpenses = []
+    if (id) {
+      const expense = state.operatingExpenses.find((item) => item.id === id)
+      if (!expense) throw new Error('Không tìm thấy khoản chi.')
+      Object.assign(expense, { spent_at: spentAt, category: category.trim(), description: description.trim(), amount: value })
+      saveState(state)
+      return expense
+    }
+    const expense = {
+      id: uuid(), spent_at: spentAt, category: category.trim(), description: description.trim(),
+      amount: value, created_by: user.id, created_at: new Date().toISOString(),
+    }
+    state.operatingExpenses.push(expense)
+    saveState(state)
+    return expense
   },
 
   async saveTableType(payload) {
@@ -1023,6 +1088,8 @@ export const demoAdapter = {
       category: payload.category || 'Đồ uống',
       unit: payload.unit.trim() || 'Phần',
       price: Number(payload.price) || 0,
+      purchase_price: payload.purchase_price === '' || payload.purchase_price == null ? null : Number(payload.purchase_price),
+      stock_quantity: payload.stock_quantity === '' || payload.stock_quantity == null ? null : Number(payload.stock_quantity),
       is_active: payload.is_active !== false,
       sort_order: Number(payload.sort_order) || 0,
     }

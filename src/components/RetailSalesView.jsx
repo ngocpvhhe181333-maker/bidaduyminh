@@ -87,10 +87,10 @@ export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvo
           </div>
           <div className="menu-picker-grid">
             {visibleMenu.length === 0 ? <p className="muted-sm">Không có món phù hợp đang bán.</p> : visibleMenu.map((item) => (
-              <button key={item.id} type="button" className="menu-pick-btn" disabled={busy || !openShift || cart[item.id] >= 99}
+              <button key={item.id} type="button" className="menu-pick-btn" disabled={busy || !openShift || cart[item.id] >= 99 || (item.stock_quantity != null && (cart[item.id] || 0) >= item.stock_quantity)}
                 onClick={() => changeQuantity(item.id, 1)}>
                 <span className="menu-pick-name">{item.name}</span>
-                <span className="menu-pick-meta"><strong className="num">{formatVnd(item.price)}</strong> / {item.unit}</span>
+                <span className="menu-pick-meta"><strong className="num">{formatVnd(item.price)}</strong> / {item.unit}{item.stock_quantity != null && ` • Còn ${item.stock_quantity}`}</span>
               </button>
             ))}
           </div>
@@ -109,7 +109,7 @@ export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvo
                   <div className="qty-controls">
                     <button type="button" className="btn-qty" disabled={busy} onClick={() => changeQuantity(item.id, -1)} aria-label={`Giảm ${item.name}`}>−</button>
                     <span className="num qty-num">{item.quantity}</span>
-                    <button type="button" className="btn-qty" disabled={busy || item.quantity >= 99} onClick={() => changeQuantity(item.id, 1)} aria-label={`Tăng ${item.name}`}>+</button>
+                    <button type="button" className="btn-qty" disabled={busy || item.quantity >= 99 || (item.stock_quantity != null && item.quantity >= item.stock_quantity)} onClick={() => changeQuantity(item.id, 1)} aria-label={`Tăng ${item.name}`}>+</button>
                     <strong className="num line-total">{formatVnd(item.price * item.quantity)}</strong>
                   </div>
                 </div>

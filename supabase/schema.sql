@@ -32,7 +32,7 @@ AS $$
       AND is_active = true
   );
 $$;
-
+-- Kiểm tra quyền Admin
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN
 LANGUAGE sql
