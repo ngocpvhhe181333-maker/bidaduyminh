@@ -1145,6 +1145,24 @@
   font-size: 0.86rem;
 }
 
+.payment-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.payment-preview-print {
+  width: min(100%, 560px);
+}
+
+.payment-preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
 .receipt-header {
   text-align: center;
   padding-bottom: 0.75rem;
@@ -1308,6 +1326,25 @@
 
 /* Chế độ In hóa đơn */
 @media print {
+  body.printing-payment-preview * {
+    visibility: hidden !important;
+  }
+
+  body.printing-payment-preview .payment-preview-print,
+  body.printing-payment-preview .payment-preview-print * {
+    visibility: visible !important;
+  }
+
+  body.printing-payment-preview .payment-preview-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    max-width: 80mm;
+    border: none;
+    padding: 0;
+  }
+
   body {
     background: #fff;
   }

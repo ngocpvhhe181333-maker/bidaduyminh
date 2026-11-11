@@ -33,7 +33,7 @@
 
 ### 4. Thanh toán và hóa đơn
 
-- Thu ngân xem trước số tiền, xác nhận thanh toán bằng tiền mặt hoặc chuyển khoản.
+- Thu ngân xác nhận số tiền, xem/in hóa đơn chờ thanh toán có QR riêng cho đơn chuyển khoản, rồi xác nhận đã nhận tiền.
 - Sau thanh toán, phiên chơi đóng và bàn trở lại trạng thái trống.
 - Lưu hóa đơn gồm thời điểm, bàn, thời lượng, chi tiết tiền, phương thức thanh toán và người thu tiền.
 - Có thể xem lại và in hóa đơn; không xóa hóa đơn đã thanh toán.

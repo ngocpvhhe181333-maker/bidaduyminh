@@ -12,7 +12,7 @@ import { calculateDiscount } from '../utils/discount'
 import { playPaymentSuccessSound } from '../utils/paymentSound'
 import { noteWithTransferReference, referenceFromSessionId, transferMemo } from '../utils/transferReference'
 import { DiscountFields } from './DiscountFields'
-import { TransferQr } from './TransferQr'
+import { PaymentPreview } from './PaymentPreview'
 import { CoffeeIcon, PlusIcon, SwapIcon } from './Icons'
 
 export function TablesView({
@@ -39,6 +39,7 @@ export function TablesView({
   const [discountType, setDiscountType] = useState('none')
   const [discountValue, setDiscountValue] = useState('')
   const [checkoutNote, setCheckoutNote] = useState('')
+  const [showPaymentPreview, setShowPaymentPreview] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -157,6 +158,7 @@ export function TablesView({
     setTransferNote('')
     setPaymentMethod('cash')
     setCheckoutNote(session.notes || '')
+    setShowPaymentPreview(false)
   }
 
   async function handleAddMenuItem(menuItemId) {
@@ -215,9 +217,14 @@ export function TablesView({
     }
   }
 
-  async function handleCheckout(e) {
+  function handleConfirmBill(e) {
     e.preventDefault()
     if (!selectedSession || selectedSession.status !== 'pending' || !tableDiscount.valid) return
+    setShowPaymentPreview(true)
+  }
+
+  async function handleCheckout() {
+    if (!selectedSession || selectedSession.status !== 'pending' || !tableDiscount.valid || !showPaymentPreview || busy) return
     setBusy(true)
     setError('')
     try {
@@ -233,6 +240,7 @@ export function TablesView({
       playPaymentSuccessSound()
       setDiscountType('none')
       setDiscountValue('')
+      setShowPaymentPreview(false)
       setSelectedSessionId(null)
       await onRefresh()
       onInvoiceCreated(invoice)
@@ -251,6 +259,7 @@ export function TablesView({
       await api.stopTableSession({ sessionId: selectedSession.id })
       await onRefresh()
       setSessionTab('checkout')
+      setShowPaymentPreview(false)
     } catch (err) {
       setError(err.message || 'Không thể kết thúc bàn.')
     } finally {
@@ -768,8 +777,30 @@ export function TablesView({
                     {busy ? 'Đang kết thúc bàn...' : 'Kết thúc bàn & chốt hóa đơn'}
                   </button>
                 </div>
+              ) : showPaymentPreview ? (
+                <PaymentPreview
+                  tableName={selectedSession.table_name_snapshot}
+                  startedAt={selectedSession.started_at}
+                  endedAt={selectedSession.ended_at}
+                  durationSeconds={selectedSessionPricing.durationSeconds}
+                  billedMinutes={selectedSessionPricing.billedMinutes}
+                  tableFee={selectedSessionPricing.tableFee}
+                  items={(selectedSession.session_items || []).map((item) => ({
+                    id: item.id, name: item.item_name_snapshot, quantity: item.quantity,
+                    total: item.unit_price_snapshot * item.quantity,
+                  }))}
+                  itemsFee={selectedSessionPricing.itemsFee}
+                  discountAmount={tableDiscount.amount}
+                  amountDue={tableAmountDue}
+                  paymentMethod={paymentMethod}
+                  memo={transferMemo(referenceFromSessionId(selectedSession.id))}
+                  note={checkoutNote}
+                  busy={busy}
+                  onBack={() => setShowPaymentPreview(false)}
+                  onConfirm={handleCheckout}
+                />
               ) : (
-                <form onSubmit={handleCheckout} className="checkout-layout">
+                <form onSubmit={handleConfirmBill} className="checkout-layout">
                   <div className="panel-box">
                     <h4>Xem trước hóa đơn thanh toán</h4>
                     <div className="checkout-breakdown">
@@ -821,7 +852,7 @@ export function TablesView({
                   </div>
 
                   <div className="panel-box form-stack">
-                    <h4>Xác nhận thu tiền</h4>
+                    <h4>Xác nhận hóa đơn</h4>
                     <DiscountFields subtotal={selectedSessionPricing.totalFee} type={discountType} value={discountValue}
                       onTypeChange={setDiscountType} onValueChange={setDiscountValue} disabled={busy} />
                     <div className="field">
@@ -846,8 +877,6 @@ export function TablesView({
                       </div>
                     </div>
 
-                    {paymentMethod === 'transfer' && <TransferQr amount={tableAmountDue} memo={transferMemo(referenceFromSessionId(selectedSession.id))} />}
-
                     <label className="field">
                       <span>Ghi chú hóa đơn (tùy chọn)</span>
                       <input
@@ -859,14 +888,10 @@ export function TablesView({
                     </label>
 
                     <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={busy || !tableDiscount.valid}>
-                      {busy
-                        ? 'Đang xử lý thanh toán...'
-                        : paymentMethod === 'transfer'
-                          ? `Xác nhận đã nhận chuyển khoản ${formatVnd(tableAmountDue)}`
-                          : `Xác nhận thanh toán ${formatVnd(tableAmountDue)}`}
+                      {paymentMethod === 'transfer' ? 'Xác nhận hóa đơn → Xem QR & in' : 'Xác nhận hóa đơn → In'}
                     </button>
                     <p className="muted-xs">
-                      Sau khi xác nhận, phiên chơi sẽ đóng, bàn trở về trạng thái Trống và hóa đơn được lưu vĩnh viễn.
+                      Sau bước này, bạn có thể in hóa đơn chờ thanh toán. Bàn chỉ trở về Trống khi xác nhận đã nhận tiền.
                     </p>
                   </div>
                 </form>

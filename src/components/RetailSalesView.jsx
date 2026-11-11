@@ -5,7 +5,7 @@ import { calculateDiscount } from '../utils/discount'
 import { playPaymentSuccessSound } from '../utils/paymentSound'
 import { createTransferReference, noteWithTransferReference, transferMemo } from '../utils/transferReference'
 import { DiscountFields } from './DiscountFields'
-import { TransferQr } from './TransferQr'
+import { PaymentPreview } from './PaymentPreview'
 
 export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvoiceCreated, onRefresh }) {
   const [cart, setCart] = useState({})
@@ -16,6 +16,7 @@ export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvo
   const [discountType, setDiscountType] = useState('none')
   const [discountValue, setDiscountValue] = useState('')
   const [note, setNote] = useState('')
+  const [showPaymentPreview, setShowPaymentPreview] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -44,9 +45,14 @@ export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvo
     setError('')
   }
 
-  async function handleCheckout(event) {
+  function handleConfirmBill(event) {
     event.preventDefault()
     if (!openShift || lines.length === 0 || busy || !discount.valid) return
+    setShowPaymentPreview(true)
+  }
+
+  async function handleCheckout() {
+    if (!showPaymentPreview || !openShift || lines.length === 0 || busy || !discount.valid) return
     setBusy(true)
     setError('')
     try {
@@ -60,6 +66,7 @@ export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvo
       playPaymentSuccessSound()
       setCart({})
       setNote('')
+      setShowPaymentPreview(false)
       setTransferReference(createTransferReference())
       setDiscountType('none')
       setDiscountValue('')
@@ -88,8 +95,8 @@ export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvo
 
       {error && <div className="alert alert-danger">{error}</div>}
 
-      <div className="session-order-layout">
-        <div className="panel-box">
+      <div className={showPaymentPreview ? 'payment-preview-page' : 'session-order-layout'}>
+        {!showPaymentPreview && <div className="panel-box">
           <h4>Thực đơn</h4>
           <div className="menu-filter-bar">
             <input type="search" placeholder="Tìm đồ ăn, thức uống..." value={search}
@@ -110,9 +117,21 @@ export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvo
               </button>
             ))}
           </div>
-        </div>
+        </div>}
 
-        <form className="panel-box form-stack" onSubmit={handleCheckout}>
+        {showPaymentPreview ? <PaymentPreview
+          items={lines.map((item) => ({ id: item.id, name: item.name, quantity: item.quantity, total: item.price * item.quantity }))}
+          tableFee={0}
+          itemsFee={total}
+          discountAmount={discount.amount}
+          amountDue={amountDue}
+          paymentMethod={paymentMethod}
+          memo={transferMemo(transferReference)}
+          note={note}
+          busy={busy}
+          onBack={() => setShowPaymentPreview(false)}
+          onConfirm={handleCheckout}
+        /> : <form className="panel-box form-stack" onSubmit={handleConfirmBill}>
           <h4>Đơn bán lẻ</h4>
           {lines.length === 0 ? <p className="muted-sm">Chưa chọn món.</p> : (
             <div className="ordered-list">
@@ -152,18 +171,14 @@ export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvo
             </div>
           </div>
 
-          {paymentMethod === 'transfer' && <TransferQr amount={amountDue} memo={transferMemo(transferReference)} />}
-
           <label className="field">
             <span>Ghi chú hóa đơn (tùy chọn)</span>
             <input type="text" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Ví dụ: Mang về" />
           </label>
           <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={busy || !openShift || lines.length === 0 || !discount.valid}>
-            {busy ? 'Đang thanh toán...' : paymentMethod === 'transfer'
-              ? `Xác nhận đã nhận chuyển khoản ${formatVnd(amountDue)}`
-              : `Xác nhận thu ${formatVnd(amountDue)}`}
+            {paymentMethod === 'transfer' ? 'Xác nhận hóa đơn → Xem QR & in' : 'Xác nhận hóa đơn → In'}
           </button>
-        </form>
+        </form>}
       </div>
     </div>
   )

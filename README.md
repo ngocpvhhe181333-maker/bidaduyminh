@@ -74,8 +74,8 @@ Sau khi chạy migration và bản Vercel mới được triển khai, mở ca r
 
 ## QR chuyển khoản
 
-- Chọn **Chuyển khoản** khi thanh toán bàn hoặc bán lẻ để hiện mã VietQR cho Techcombank (TCB), tài khoản `1999222299999`, chủ tài khoản **DONG DUY MINH**. Mỗi hóa đơn có nội dung chuyển khoản riêng; mã lấy đúng số tiền sau giảm giá, được tạo offline bằng thư viện `vietqr` và cũng hiện trên hóa đơn in.
-- Thu ngân kiểm tra tiền đã vào tài khoản rồi bấm **Xác nhận đã nhận chuyển khoản**. Âm báo phát sau khi lưu hóa đơn thành công. QR không tự xác nhận giao dịch ngân hàng.
+- Chọn **Chuyển khoản** rồi bấm **Xác nhận hóa đơn** để mở hóa đơn chờ thanh toán. QR nằm trên hóa đơn này, cạnh nút **In hóa đơn có QR**; màn hình chỉnh giảm giá và phương thức thanh toán không hiện QR. Mã dùng Techcombank (TCB), tài khoản `1999222299999`, chủ tài khoản **DONG DUY MINH**, với nội dung riêng cho từng đơn và số tiền sau giảm giá. Mã được tạo offline bằng thư viện `vietqr`.
+- Thu ngân kiểm tra tiền đã vào tài khoản rồi bấm **Đã nhận chuyển khoản** trên hóa đơn chờ thanh toán. Lúc đó hệ thống mới lưu hóa đơn đã thanh toán và phát âm báo. QR không tự xác nhận giao dịch ngân hàng.
 - Với bàn chơi, bấm **Kết thúc bàn & chốt hóa đơn** trước; giờ chơi dừng, bàn chuyển sang **Chờ thanh toán**, rồi mới hiện hóa đơn và QR. Bàn chỉ trở về **Trống** sau khi thu tiền thành công.
 
 ## Lệnh hữu ích
