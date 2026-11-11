@@ -2,9 +2,7 @@
 
 Repository: https://github.com/ngocpvhhe181333-maker/bidaduyminh
 
-Ứng dụng quản lý quán bi-a 5 bàn, 1 nhân viên. Giao diện dùng React JavaScript + Vite; dự kiến dùng Supabase cho dữ liệu và đăng nhập, Vercel để triển khai. Xem [danh sách chức năng](./CHUC_NANG.md).
-
-> Hiện tại đây là bộ khung React và tài liệu dự án. Chức năng quản lý quán và kết nối Supabase chưa được lập trình.
+Ứng dụng quản lý quán bi-a 5 bàn, 1 nhân viên. Giao diện dùng React JavaScript + Vite; dữ liệu, phân quyền (RLS) và đăng nhập dùng Supabase; triển khai trên Vercel. Xem chi tiết yêu cầu tại [danh sách chức năng](./CHUC_NANG.md).
 
 ## Chạy trên máy
 
@@ -17,13 +15,26 @@ npm run dev
 
 Mở địa chỉ Vite hiển thị trong terminal (thường là `http://localhost:5173`).
 
+> **Chế độ Demo cục bộ:** Nếu chưa tạo file `.env.local`, ứng dụng tự chạy ở chế độ dùng thử cục bộ (dữ liệu lưu trên `localStorage`) để bạn kiểm tra ngay giao diện và toàn bộ luồng nghiệp vụ với 2 nút đăng nhập nhanh **Thu ngân** và **Admin**. Khi cấu hình `.env.local` hợp lệ, ứng dụng sẽ tự chuyển sang chạy hoàn toàn với Supabase.
+
 ## Chuẩn bị Supabase
 
 1. Tạo một project tại [Supabase Dashboard](https://supabase.com/dashboard).
-2. Trong mục **Connect** của project, lấy **Project URL** và **publishable key**.
-3. Sao chép `.env.example` thành `.env.local`, rồi điền hai giá trị đó.
-4. Khi bắt đầu lập trình kết nối, cài thư viện bằng `npm install @supabase/supabase-js`.
-5. Tạo các bảng và chính sách Row Level Security (RLS) cho hai vai trò Admin, Thu ngân trước khi đưa dữ liệu thật vào ứng dụng.
+2. Vào **SQL Editor** và chạy toàn bộ nội dung file [`supabase/schema.sql`](./supabase/schema.sql) để khởi tạo các bảng, ràng buộc chống mở trùng bàn/ca, hàm tính tiền giờ, các RPC nghiệp vụ và chính sách **Row Level Security (RLS)** cho Admin và Thu ngân (kèm sẵn 5 bàn và thực đơn mẫu).
+3. Trong mục **Connect** của project, lấy **Project URL** và **publishable key**.
+4. Sao chép `.env.example` thành `.env.local`, rồi điền hai giá trị đó.
+5. Đăng ký tài khoản của chủ quán bằng email của bạn. Mọi tài khoản tự đăng ký đều ở trạng thái chờ kích hoạt. Trong **SQL Editor**, thay email mẫu bên dưới bằng email vừa đăng ký rồi chạy lệnh để cấp quyền Admin:
+   ```sql
+   UPDATE public.profiles
+   SET role = 'admin', is_active = true
+   WHERE email = 'email-chu-quan@example.com';
+   ```
+   Kiểm tra kết quả bằng `SELECT email, role, is_active FROM public.profiles;`. Sau đó đăng nhập lại. Chỉ người có quyền vào Supabase Dashboard mới nên chạy bước này.
+6. Tài khoản nhân viên tự đăng ký sẽ là Thu ngân chờ Admin kích hoạt trong tab **Quản trị → Tài khoản**.
+7. *(Tùy chọn)* Để Admin tạo trực tiếp tài khoản nhân viên mới ngay trên web mà không lộ `service_role`, triển khai Edge Function [`supabase/functions/admin-create-user/index.ts`](./supabase/functions/admin-create-user/index.ts):
+   ```bash
+   supabase functions deploy admin-create-user
+   ```
 
 ```dotenv
 VITE_SUPABASE_URL=https://your-project.supabase.co
