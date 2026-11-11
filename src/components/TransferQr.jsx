@@ -29,7 +29,6 @@ export function TransferQr({ amount, memo, onReceipt = false, onGenerated }) {
       const url = response.data?.data?.qrDataURL
       if (response.data?.code !== '00' || !url) throw new Error('Không tạo được mã QR.')
       setQrState({ key, imageUrl: url, error: '' })
-      onGenerated?.()
     }).catch(() => {
       if (active) {
         setQrState({ key, imageUrl: '', error: 'Không tạo được mã QR. Vui lòng dùng thông tin tài khoản bên dưới.' })
@@ -45,7 +44,7 @@ export function TransferQr({ amount, memo, onReceipt = false, onGenerated }) {
   return (
     <div className="transfer-qr">
       <strong>{onReceipt ? 'Mã QR của hóa đơn' : 'Quét mã chuyển khoản'}</strong>
-      {imageUrl ? <img src={imageUrl} alt={`Mã QR Techcombank chuyển ${formatVnd(amount)}`} /> :
+      {imageUrl ? <img src={imageUrl} alt={`Mã QR Techcombank chuyển ${formatVnd(amount)}`} onLoad={() => onGenerated?.()} onError={() => onGenerated?.()} /> :
         <span className="muted-sm">{error || 'Đang tạo mã QR...'}</span>}
       <div className="transfer-qr-details">
         <span>Techcombank (TCB) · {ACCOUNT_NUMBER}</span>

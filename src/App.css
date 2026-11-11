@@ -1326,23 +1326,29 @@
 
 /* Chế độ In hóa đơn */
 @media print {
-  body.printing-payment-preview * {
-    visibility: hidden !important;
+  body.printing-payment-preview *:not(.print-path):not(.print-content) {
+    display: none !important;
   }
 
-  body.printing-payment-preview .payment-preview-print,
-  body.printing-payment-preview .payment-preview-print * {
-    visibility: visible !important;
+  body.printing-payment-preview .print-path {
+    display: block !important;
+    position: static !important;
+    overflow: visible !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
   }
 
   body.printing-payment-preview .payment-preview-print {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 80mm;
-    max-width: 80mm;
-    border: none;
-    padding: 0;
+    display: block !important;
+    width: 80mm !important;
+    max-width: 80mm !important;
+    margin: 0 auto !important;
   }
 
   body {

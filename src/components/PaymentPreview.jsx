@@ -1,17 +1,42 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { formatDateTime, formatDurationHms, formatMinutesReadable, formatVnd } from '../utils/format'
 import { TransferQr } from './TransferQr'
 import { PrintIcon } from './Icons'
 
 export function PaymentPreview({ tableName, startedAt, endedAt, durationSeconds, billedMinutes, tableFee, items, itemsFee, discountAmount, amountDue, paymentMethod, memo, note, busy, onBack, onConfirm }) {
   const [readyKey, setReadyKey] = useState('')
+  const receiptRef = useRef(null)
+  const printElementsRef = useRef([])
   const qrKey = `${amountDue}|${memo}`
   const needsQr = paymentMethod === 'transfer' && amountDue > 0
   const onQrGenerated = useCallback(() => setReadyKey(qrKey), [qrKey])
 
+  const cleanupPrint = useCallback(() => {
+    document.body.classList.remove('printing-payment-preview')
+    for (const element of printElementsRef.current) {
+      element.classList.remove('print-path', 'print-content')
+    }
+    printElementsRef.current = []
+  }, [])
+
+  useEffect(() => cleanupPrint, [cleanupPrint])
+
   function printInvoice() {
+    const receipt = receiptRef.current
+    if (!receipt) return
+    cleanupPrint()
+    const elements = []
+    for (let parent = receipt.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
+      parent.classList.add('print-path')
+      elements.push(parent)
+    }
+    for (const element of [receipt, ...receipt.querySelectorAll('*')]) {
+      element.classList.add('print-content')
+      elements.push(element)
+    }
+    printElementsRef.current = elements
     document.body.classList.add('printing-payment-preview')
-    window.addEventListener('afterprint', () => document.body.classList.remove('printing-payment-preview'), { once: true })
+    window.addEventListener('afterprint', cleanupPrint, { once: true })
     window.print()
   }
 
@@ -24,7 +49,7 @@ export function PaymentPreview({ tableName, startedAt, endedAt, durationSeconds,
         </button>
       </div>
 
-      <div className="receipt-sheet payment-preview-print">
+      <div ref={receiptRef} className="receipt-sheet payment-preview-print">
         <div className="receipt-header">
           <h2>DUY MINH BI-A</h2>
           <p>HÓA ĐƠN CHỜ THANH TOÁN</p>
