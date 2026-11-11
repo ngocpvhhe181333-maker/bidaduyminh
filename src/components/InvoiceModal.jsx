@@ -86,6 +86,7 @@ export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Chi tiết hóa đơn">
       <div className="modal-card modal-lg">
+        <div className="modal-sheet-handle no-print" aria-hidden="true" />
         <div className="modal-header no-print">
           <div>
             <h3>Hóa đơn {invoice.invoice_code}</h3>

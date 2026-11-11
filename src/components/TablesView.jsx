@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../services/api'
+import { calculateDiscount } from '../utils/discount'
 import {
   formatDurationHms,
   formatMinutesReadable,
@@ -7,13 +8,12 @@ import {
   formatVnd,
   getRoundingLabel,
 } from '../utils/format'
-import { calculateTableFee, getEffectiveTablePricing } from '../utils/pricing'
-import { calculateDiscount } from '../utils/discount'
 import { playPaymentSuccessSound } from '../utils/paymentSound'
+import { calculateTableFee, getEffectiveTablePricing } from '../utils/pricing'
 import { noteWithTransferReference, referenceFromSessionId, transferMemo } from '../utils/transferReference'
 import { DiscountFields } from './DiscountFields'
-import { PaymentPreview } from './PaymentPreview'
 import { CoffeeIcon, PlusIcon, SwapIcon } from './Icons'
+import { PaymentPreview } from './PaymentPreview'
 
 export function TablesView({
   tableTypes,
@@ -30,6 +30,7 @@ export function TablesView({
   const [openNote, setOpenNote] = useState('')
   const [selectedSessionId, setSelectedSessionId] = useState(null)
   const [sessionTab, setSessionTab] = useState('order') // 'order' | 'transfer' | 'checkout'
+  const [mobileOrderPane, setMobileOrderPane] = useState('menu') // 'menu' | 'cart' (chỉ dùng trên màn hình nhỏ)
   const [menuCategory, setMenuCategory] = useState('Tất cả')
   const [menuSearch, setMenuSearch] = useState('')
   const [transferTargetId, setTransferTargetId] = useState('')
@@ -114,6 +115,16 @@ export function TablesView({
     })
   }, [menuItems, menuCategory, menuSearch])
 
+  const selectedSessionItemQtyMap = useMemo(() => {
+    const map = {}
+    for (const item of selectedSession?.session_items || []) {
+      if (item.menu_item_id) {
+        map[item.menu_item_id] = (map[item.menu_item_id] || 0) + item.quantity
+      }
+    }
+    return map
+  }, [selectedSession])
+
   function handleClickOpenTable(table) {
     setError('')
     if (!openShift) {
@@ -138,6 +149,7 @@ export function TablesView({
       await onRefresh()
       setSelectedSessionId(created.id)
       setSessionTab('order')
+      setMobileOrderPane('menu')
     } catch (err) {
       setError(err.message || 'Không thể mở bàn.')
     } finally {
@@ -149,6 +161,7 @@ export function TablesView({
     setError('')
     setSelectedSessionId(session.id)
     setSessionTab(session.status === 'pending' ? 'checkout' : initialTab)
+    setMobileOrderPane('menu')
     setDiscountType('none')
     setDiscountValue('')
     setMenuCategory('Tất cả')
@@ -285,8 +298,10 @@ export function TablesView({
       totalFee: calc.tableFee + itemsFee,
     }
   }, [selectedSession, nowMs])
+
   const tableDiscount = calculateDiscount(selectedSessionPricing?.totalFee || 0, discountType, discountValue)
   const tableAmountDue = (selectedSessionPricing?.totalFee || 0) - tableDiscount.amount
+  const selectedTotalQty = (selectedSession?.session_items || []).reduce((s, i) => s + i.quantity, 0)
 
   return (
     <div className="page-stack">
@@ -314,25 +329,32 @@ export function TablesView({
         </div>
         <div className="kpi-chip">
           <span className="kpi-label">Chờ thanh toán</span>
-          <strong className="kpi-value">{stats.pending} bàn</strong>
+          <strong className="kpi-value text-sky">{stats.pending} bàn</strong>
         </div>
         <div className="kpi-chip">
           <span className="kpi-label">Bảo trì</span>
           <strong className="kpi-value text-muted">{stats.maintenance} bàn</strong>
         </div>
-        <div className="kpi-chip">
+        <div className="kpi-chip kpi-chip-wide">
           <span className="kpi-label">Tạm tính hiện tại</span>
-          <strong className="kpi-value num">{formatVnd(stats.provisionalTotal)}</strong>
+          <strong className="kpi-value num text-brass">{formatVnd(stats.provisionalTotal)}</strong>
         </div>
       </div>
 
-      <div className="tables-grid">
+      <div className="tables-square-grid">
         {tables.map((table) => {
           const pricing = getEffectiveTablePricing(table, tableTypesMap)
           const session = sessionByTableId[table.id]
           const isPlaying = table.status === 'playing' && session
           const isPending = session?.status === 'pending'
           const isMaintenance = table.status === 'maintenance'
+          const cardStateClass = isMaintenance
+            ? 'maintenance'
+            : isPending
+              ? 'pending'
+              : isPlaying
+                ? 'playing'
+                : 'available'
 
           let liveCalc = null
           let itemsFee = 0
@@ -353,74 +375,73 @@ export function TablesView({
             }
           }
 
+          const ballNumber = ((Number(table.table_number) || 1) - 1) % 9 + 1
+
           return (
             <article
               key={table.id}
-              className={`table-card status-card-${table.status}`}
+              className={`table-square-card state-${cardStateClass}`}
             >
-              <div className="table-card-head">
-                <div>
-                  <h3>{table.name}</h3>
-                  <div className="table-type-label">{pricing.typeName}</div>
+              <div className="square-card-head">
+                <div className="square-title-row">
+                  <span className={`pool-ball ball-${ballNumber}`} aria-hidden="true">
+                    {table.table_number}
+                  </span>
+                  <div className="square-title-text">
+                    <h3>{table.name}</h3>
+                    <span className="square-type">{pricing.typeName}</span>
+                  </div>
                 </div>
-                <span className={`status-pill status-${table.status}`}>
+                <span className={`status-pill status-${cardStateClass}`}>
+                  {isPlaying && !isPending && <span className="live-pulse" aria-hidden="true" />}
                   {table.status === 'available'
                     ? 'Trống'
-                    : table.status === 'playing'
-                      ? isPending ? 'Chờ thanh toán' : 'Đang chơi'
+                    : isPlaying
+                      ? isPending ? 'Chờ thu' : 'Đang chơi'
                       : 'Bảo trì'}
                 </span>
               </div>
 
-              <div className="table-card-rate">
-                <span className="num">{formatVnd(isPlaying ? session.hourly_rate_snapshot : pricing.hourlyRate)}/giờ</span>
-                <span className="muted-xs">
-                  {getRoundingLabel(
-                    isPlaying ? session.rounding_mode_snapshot : pricing.roundingMode,
-                    isPlaying ? session.rounding_minutes_snapshot : pricing.roundingMinutes,
-                    isPlaying ? session.min_minutes_snapshot : pricing.minMinutes
-                  )}
-                </span>
+              <div className="square-card-body">
+                {isPlaying && liveCalc ? (
+                  <>
+                    <div className="square-timer-box">
+                      <span className="square-clock mono">{formatDurationHms(liveCalc.durationSeconds)}</span>
+                      <span className="muted-xs mono">Vào {formatTimeOnly(session.started_at)}</span>
+                    </div>
+                    <div className="square-metrics">
+                      <div className="live-row">
+                        <span className="muted-xs">Giờ ({formatMinutesReadable(liveCalc.billedMinutes)})</span>
+                        <span className="num">{formatVnd(liveCalc.tableFee)}</span>
+                      </div>
+                      <div className="live-row">
+                        <span className="muted-xs">Món ({itemsCount})</span>
+                        <span className="num">{formatVnd(itemsFee)}</span>
+                      </div>
+                      <div className="live-row square-total">
+                        <span>Tạm tính</span>
+                        <strong className="num text-brass">{formatVnd(liveCalc.tableFee + itemsFee)}</strong>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="square-idle-info">
+                    <div className="square-rate num">
+                      {formatVnd(pricing.hourlyRate)}<span>/giờ</span>
+                    </div>
+                    <div className="muted-xs">
+                      {getRoundingLabel(pricing.roundingMode, pricing.roundingMinutes, pricing.minMinutes)}
+                    </div>
+                    <p className="square-note muted-xs">
+                      {isMaintenance
+                        ? table.notes || 'Tạm ngưng phục vụ.'
+                        : table.notes || 'Sẵn sàng đón khách.'}
+                    </p>
+                  </div>
+                )}
               </div>
 
-              {isPlaying && liveCalc ? (
-                <div className="table-live-box">
-                  <div className="live-row">
-                    <span>Giờ bắt đầu</span>
-                    <strong className="num">{formatTimeOnly(session.started_at)}</strong>
-                  </div>
-                  <div className="live-row">
-                    <span>{isPending ? 'Thời gian đã chốt' : 'Thời gian chơi'}</span>
-                    <strong className="timer-badge num">{formatDurationHms(liveCalc.durationSeconds)}</strong>
-                  </div>
-                  <div className="live-row">
-                    <span>Tiền giờ ({formatMinutesReadable(liveCalc.billedMinutes)})</span>
-                    <span className="num">{formatVnd(liveCalc.tableFee)}</span>
-                  </div>
-                  <div className="live-row">
-                    <span>Đồ uống/ăn ({itemsCount})</span>
-                    <span className="num">{formatVnd(itemsFee)}</span>
-                  </div>
-                  <div className="live-row live-total">
-                    <span>Tạm tính</span>
-                    <strong className="num">{formatVnd(liveCalc.tableFee + itemsFee)}</strong>
-                  </div>
-                </div>
-              ) : (
-                <div className="table-idle-box">
-                  {isMaintenance ? (
-                    <p className="muted-sm">
-                      {table.notes || 'Bàn đang bảo trì, tạm ngưng phục vụ.'}
-                    </p>
-                  ) : (
-                    <p className="muted-sm">
-                      {table.notes || 'Sẵn sàng đón khách.'}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <div className="table-card-actions">
+              <div className="square-card-actions">
                 {table.status === 'available' && (
                   <button
                     type="button"
@@ -434,20 +455,22 @@ export function TablesView({
 
                 {isPlaying && (
                   <>
-                    {!isPending && <button
-                      type="button"
-                      className="btn btn-outline"
-                      onClick={() => openSessionWorkspace(session, 'order')}
-                    >
-                      <CoffeeIcon size={16} />
-                      <span>Gọi món / Chi tiết</span>
-                    </button>}
+                    {!isPending && (
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        onClick={() => openSessionWorkspace(session, 'order')}
+                      >
+                        <CoffeeIcon size={15} />
+                        <span>Gọi món</span>
+                      </button>
+                    )}
                     <button
                       type="button"
-                      className="btn btn-primary"
+                      className={`btn ${isPending ? 'btn-brass btn-block' : 'btn-primary'}`}
                       onClick={() => openSessionWorkspace(session, 'checkout')}
                     >
-                      {isPending ? 'Hóa đơn & thu tiền' : 'Kết thúc bàn'}
+                      {isPending ? 'Thu tiền' : 'Kết thúc'}
                     </button>
                   </>
                 )}
@@ -467,9 +490,10 @@ export function TablesView({
       {openTableTarget && (
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Mở phiên chơi">
           <div className="modal-card modal-sm">
+            <div className="modal-sheet-handle" aria-hidden="true" />
             <div className="modal-header">
               <h3>Mở phiên — {openTableTarget.name}</h3>
-              <button type="button" className="btn btn-ghost" onClick={() => setOpenTableTarget(null)}>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpenTableTarget(null)}>
                 Đóng
               </button>
             </div>
@@ -483,7 +507,7 @@ export function TablesView({
                       Loại bàn: <strong>{p.typeName}</strong>
                     </div>
                     <div>
-                      Đơn giá áp dụng: <strong className="num">{formatVnd(p.hourlyRate)}/giờ</strong>
+                      Đơn giá áp dụng: <strong className="num text-brass">{formatVnd(p.hourlyRate)}/giờ</strong>
                     </div>
                     <div className="muted-xs">
                       {getRoundingLabel(p.roundingMode, p.roundingMinutes, p.minMinutes)}
@@ -519,192 +543,225 @@ export function TablesView({
       {selectedSession && selectedSessionPricing && (
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Chi tiết phiên chơi">
           <div className="modal-card modal-xl">
+            <div className="modal-sheet-handle" aria-hidden="true" />
             <div className="modal-header">
               <div>
                 <h3>
                   {selectedSession.table_name_snapshot} • {selectedSession.table_type_snapshot}
                 </h3>
-                <div className="muted-sm">
-                  Bắt đầu lúc {formatTimeOnly(selectedSession.started_at)} • Đã chơi{' '}
-                  <strong className="num">{formatDurationHms(selectedSessionPricing.durationSeconds)}</strong> •{' '}
-                  Tính tiền <strong>{formatMinutesReadable(selectedSessionPricing.billedMinutes)}</strong> (
-                  <span className="num">{formatVnd(selectedSession.hourly_rate_snapshot)}/giờ</span>)
+                <div className="muted-sm session-header-meta">
+                  Vào {formatTimeOnly(selectedSession.started_at)} •{' '}
+                  <strong className="mono text-brass">
+                    {formatDurationHms(selectedSessionPricing.durationSeconds)}
+                  </strong>{' '}
+                  • Tính <strong>{formatMinutesReadable(selectedSessionPricing.billedMinutes)}</strong> (
+                  <span className="num">{formatVnd(selectedSession.hourly_rate_snapshot)}/h</span>)
                 </div>
               </div>
-              <button type="button" className="btn btn-ghost" onClick={() => setSelectedSessionId(null)}>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSelectedSessionId(null)}>
                 Đóng
               </button>
             </div>
 
             <div className="modal-subtabs">
-              <button
-                type="button"
-                className={`tab-pill ${sessionTab === 'order' ? 'active' : ''}`}
-                disabled={selectedSession.status === 'pending'}
-                onClick={() => {
-                  setSessionTab('order')
-                  setError('')
-                }}
-              >
-                Gọi món ({(selectedSession.session_items || []).reduce((s, i) => s + i.quantity, 0)})
-              </button>
-              <button
-                type="button"
-                className={`tab-pill ${sessionTab === 'transfer' ? 'active' : ''}`}
-                disabled={selectedSession.status === 'pending'}
-                onClick={() => {
-                  setSessionTab('transfer')
-                  setTransferTargetId(availableTables[0]?.id || '')
-                  setError('')
-                }}
-              >
-                <SwapIcon size={15} /> Chuyển bàn
-              </button>
-              <button
-                type="button"
-                className={`tab-pill ${sessionTab === 'checkout' ? 'active' : ''}`}
-                onClick={() => {
-                  setSessionTab('checkout')
-                  setError('')
-                }}
-              >
-                {selectedSession.status === 'pending' ? 'Hóa đơn & thanh toán' : 'Kết thúc bàn'} ({formatVnd(selectedSessionPricing.totalFee)})
-              </button>
+              <div className="tab-pills scrollable-pills">
+                <button
+                  type="button"
+                  className={`tab-pill ${sessionTab === 'order' ? 'active' : ''}`}
+                  disabled={selectedSession.status === 'pending'}
+                  onClick={() => {
+                    setSessionTab('order')
+                    setError('')
+                  }}
+                >
+                  Gọi món ({selectedTotalQty})
+                </button>
+                <button
+                  type="button"
+                  className={`tab-pill ${sessionTab === 'transfer' ? 'active' : ''}`}
+                  disabled={selectedSession.status === 'pending'}
+                  onClick={() => {
+                    setSessionTab('transfer')
+                    setTransferTargetId(availableTables[0]?.id || '')
+                    setError('')
+                  }}
+                >
+                  <SwapIcon size={15} /> Chuyển bàn
+                </button>
+                <button
+                  type="button"
+                  className={`tab-pill ${sessionTab === 'checkout' ? 'active' : ''}`}
+                  onClick={() => {
+                    setSessionTab('checkout')
+                    setError('')
+                  }}
+                >
+                  {selectedSession.status === 'pending' ? 'Hóa đơn & Thu tiền' : 'Kết thúc bàn'} (
+                  <span className="num">{formatVnd(selectedSessionPricing.totalFee)}</span>)
+                </button>
+              </div>
             </div>
 
             <div className="modal-body">
               {error && <div className="alert alert-danger" style={{ marginBottom: '0.85rem' }}>{error}</div>}
 
               {sessionTab === 'order' && (
-                <div className="session-order-layout">
-                  {/* Danh sách món đã gọi */}
-                  <div className="panel-box">
-                    <h4>Món đã gọi trên {selectedSession.table_name_snapshot}</h4>
-                    {(selectedSession.session_items || []).length === 0 ? (
-                      <p className="muted-sm">Chưa có món nào. Chọn món từ thực đơn bên cạnh để thêm.</p>
-                    ) : (
-                      <div className="ordered-list">
-                        {(selectedSession.session_items || []).map((item) => (
-                          <div key={item.id} className="ordered-item">
-                            <div>
-                              <strong>{item.item_name_snapshot}</strong>
-                              <div className="muted-xs num">
-                                {formatVnd(item.unit_price_snapshot)} / {item.unit_snapshot}
+                <>
+                  {/* Bộ chuyển nhanh trên điện thoại giữa Thực đơn và Món đã gọi */}
+                  <div className="mobile-pane-switch">
+                    <button
+                      type="button"
+                      className={`mobile-switch-btn ${mobileOrderPane === 'menu' ? 'active' : ''}`}
+                      onClick={() => setMobileOrderPane('menu')}
+                    >
+                      + Chọn món từ menu
+                    </button>
+                    <button
+                      type="button"
+                      className={`mobile-switch-btn ${mobileOrderPane === 'cart' ? 'active' : ''}`}
+                      onClick={() => setMobileOrderPane('cart')}
+                    >
+                      Món đã gọi ({selectedTotalQty}) •{' '}
+                      <span className="num">{formatVnd(selectedSessionPricing.totalFee)}</span>
+                    </button>
+                  </div>
+
+                  <div className="session-order-layout">
+                    {/* Danh sách món đã gọi */}
+                    <div className={`panel-box ${mobileOrderPane !== 'cart' ? 'mobile-hide-pane' : ''}`}>
+                      <h4>Món đã gọi trên {selectedSession.table_name_snapshot}</h4>
+                      {(selectedSession.session_items || []).length === 0 ? (
+                        <p className="muted-sm">Chưa có món nào. Chọn món từ thực đơn để thêm.</p>
+                      ) : (
+                        <div className="ordered-list">
+                          {(selectedSession.session_items || []).map((item) => (
+                            <div key={item.id} className="ordered-item">
+                              <div className="ordered-item-info">
+                                <strong>{item.item_name_snapshot}</strong>
+                                <div className="muted-xs num">
+                                  {formatVnd(item.unit_price_snapshot)} / {item.unit_snapshot}
+                                </div>
+                              </div>
+                              <div className="qty-controls">
+                                <button
+                                  type="button"
+                                  className="btn-qty"
+                                  disabled={busy}
+                                  onClick={() => handleChangeItemQty(item.id, item.quantity - 1)}
+                                  aria-label="Giảm số lượng"
+                                >
+                                  −
+                                </button>
+                                <span className="num qty-num">{item.quantity}</span>
+                                <button
+                                  type="button"
+                                  className="btn-qty"
+                                  disabled={busy}
+                                  onClick={() => handleChangeItemQty(item.id, item.quantity + 1)}
+                                  aria-label="Tăng số lượng"
+                                >
+                                  +
+                                </button>
+                                <strong className="num line-total">
+                                  {formatVnd(item.unit_price_snapshot * item.quantity)}
+                                </strong>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-ghost-danger"
+                                  disabled={busy}
+                                  onClick={() => handleChangeItemQty(item.id, 0)}
+                                >
+                                  Xóa
+                                </button>
                               </div>
                             </div>
-                            <div className="qty-controls">
-                              <button
-                                type="button"
-                                className="btn-qty"
-                                disabled={busy}
-                                onClick={() => handleChangeItemQty(item.id, item.quantity - 1)}
-                                aria-label="Giảm số lượng"
-                              >
-                                −
-                              </button>
-                              <span className="num qty-num">{item.quantity}</span>
-                              <button
-                                type="button"
-                                className="btn-qty"
-                                disabled={busy}
-                                onClick={() => handleChangeItemQty(item.id, item.quantity + 1)}
-                                aria-label="Tăng số lượng"
-                              >
-                                +
-                              </button>
-                              <strong className="num line-total">
-                                {formatVnd(item.unit_price_snapshot * item.quantity)}
-                              </strong>
-                              <button
-                                type="button"
-                                className="btn btn-sm btn-ghost-danger"
-                                disabled={busy}
-                                onClick={() => handleChangeItemQty(item.id, 0)}
-                              >
-                                Xóa
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="summary-divider">
-                      <div className="live-row">
-                        <span>Tiền giờ tạm tính</span>
-                        <span className="num">{formatVnd(selectedSessionPricing.tableFee)}</span>
-                      </div>
-                      <div className="live-row">
-                        <span>Tiền đồ uống &amp; đồ ăn</span>
-                        <span className="num">{formatVnd(selectedSessionPricing.itemsFee)}</span>
-                      </div>
-                      <div className="live-row live-total">
-                        <span>Tổng tạm tính</span>
-                        <strong className="num">{formatVnd(selectedSessionPricing.totalFee)}</strong>
-                      </div>
-                    </div>
-
-                    {(selectedSession.session_transfers || []).length > 0 && (
-                      <div className="transfer-history">
-                        <div className="muted-xs" style={{ fontWeight: 600, marginBottom: '0.25rem' }}>
-                          Lịch sử chuyển bàn:
+                          ))}
                         </div>
-                        {selectedSession.session_transfers.map((tr) => (
-                          <div key={tr.id} className="muted-xs">
-                            • {tr.from_table_name} → {tr.to_table_name} ({formatTimeOnly(tr.transferred_at)})
-                            {tr.note ? ` — ${tr.note}` : ''}
+                      )}
+
+                      <div className="summary-divider">
+                        <div className="live-row">
+                          <span>Tiền giờ tạm tính</span>
+                          <span className="num">{formatVnd(selectedSessionPricing.tableFee)}</span>
+                        </div>
+                        <div className="live-row">
+                          <span>Tiền đồ uống &amp; đồ ăn</span>
+                          <span className="num">{formatVnd(selectedSessionPricing.itemsFee)}</span>
+                        </div>
+                        <div className="live-row live-total">
+                          <span>Tổng tạm tính</span>
+                          <strong className="num text-brass">{formatVnd(selectedSessionPricing.totalFee)}</strong>
+                        </div>
+                      </div>
+
+                      {(selectedSession.session_transfers || []).length > 0 && (
+                        <div className="transfer-history">
+                          <div className="muted-xs" style={{ fontWeight: 600, marginBottom: '0.25rem' }}>
+                            Lịch sử chuyển bàn:
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Chọn món từ thực đơn */}
-                  <div className="panel-box">
-                    <div className="menu-filter-bar">
-                      <input
-                        type="search"
-                        placeholder="Tìm nhanh đồ uống, đồ ăn..."
-                        value={menuSearch}
-                        onChange={(e) => setMenuSearch(e.target.value)}
-                      />
-                      <div className="chip-row">
-                        {['Tất cả', 'Đồ uống', 'Đồ ăn', 'Khác'].map((cat) => (
-                          <button
-                            key={cat}
-                            type="button"
-                            className={`chip ${menuCategory === cat ? 'active' : ''}`}
-                            onClick={() => setMenuCategory(cat)}
-                          >
-                            {cat}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="menu-picker-grid">
-                      {activeMenuItems.length === 0 ? (
-                        <p className="muted-sm">Không có món phù hợp đang bán.</p>
-                      ) : (
-                        activeMenuItems.map((m) => (
-                          <button
-                            key={m.id}
-                            type="button"
-                            className="menu-pick-btn"
-                            disabled={busy || (m.stock_quantity != null && m.stock_quantity < 1)}
-                            onClick={() => handleAddMenuItem(m.id)}
-                          >
-                            <span className="menu-pick-name">{m.name}</span>
-                            <span className="menu-pick-meta">
-                              <strong className="num">{formatVnd(m.price)}</strong> / {m.unit}
-                              {m.stock_quantity != null && ` • Còn ${m.stock_quantity}`}
-                            </span>
-                          </button>
-                        ))
+                          {selectedSession.session_transfers.map((tr) => (
+                            <div key={tr.id} className="muted-xs">
+                              • {tr.from_table_name} → {tr.to_table_name} ({formatTimeOnly(tr.transferred_at)})
+                              {tr.note ? ` — ${tr.note}` : ''}
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
+
+                    {/* Chọn món từ thực đơn */}
+                    <div className={`panel-box ${mobileOrderPane !== 'menu' ? 'mobile-hide-pane' : ''}`}>
+                      <div className="menu-filter-bar">
+                        <input
+                          type="search"
+                          placeholder="Tìm nhanh đồ uống, đồ ăn..."
+                          value={menuSearch}
+                          onChange={(e) => setMenuSearch(e.target.value)}
+                        />
+                        <div className="chip-row scrollable-chips">
+                          {['Tất cả', 'Đồ uống', 'Đồ ăn', 'Khác'].map((cat) => (
+                            <button
+                              key={cat}
+                              type="button"
+                              className={`chip ${menuCategory === cat ? 'active' : ''}`}
+                              onClick={() => setMenuCategory(cat)}
+                            >
+                              {cat}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="menu-picker-grid">
+                        {activeMenuItems.length === 0 ? (
+                          <p className="muted-sm">Không có món phù hợp đang bán.</p>
+                        ) : (
+                          activeMenuItems.map((m) => {
+                            const currentQty = selectedSessionItemQtyMap[m.id] || 0
+                            return (
+                              <button
+                                key={m.id}
+                                type="button"
+                                className={`menu-pick-btn ${currentQty > 0 ? 'has-qty' : ''}`}
+                                disabled={busy || (m.stock_quantity != null && m.stock_quantity < 1)}
+                                onClick={() => handleAddMenuItem(m.id)}
+                              >
+                                <div className="menu-pick-top">
+                                  <span className="menu-pick-name">{m.name}</span>
+                                  {currentQty > 0 && <span className="qty-pill num">×{currentQty}</span>}
+                                </div>
+                                <span className="menu-pick-meta">
+                                  <strong className="num text-brass">{formatVnd(m.price)}</strong> / {m.unit}
+                                  {m.stock_quantity != null && ` • Còn ${m.stock_quantity}`}
+                                </span>
+                              </button>
+                            )
+                          })
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                </>
               )}
 
               {sessionTab === 'transfer' && (
@@ -759,7 +816,7 @@ export function TablesView({
                       </label>
 
                       <div>
-                        <button type="submit" className="btn btn-primary" disabled={busy}>
+                        <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
                           {busy ? 'Đang chuyển...' : 'Xác nhận chuyển bàn'}
                         </button>
                       </div>
@@ -769,11 +826,26 @@ export function TablesView({
               )}
 
               {sessionTab === 'checkout' && (selectedSession.status !== 'pending' ? (
-                <div className="panel-box form-stack">
+                <div className="panel-box form-stack narrow-panel">
                   <h4>Kết thúc bàn để lập hóa đơn</h4>
-                  <p className="muted-sm">Bàn vẫn đang tính giờ. Hãy kết thúc bàn để chốt thời gian và số tiền; sau đó hóa đơn cùng mã QR chuyển khoản mới xuất hiện.</p>
-                  <div className="live-row"><span>Tạm tính hiện tại</span><strong className="num">{formatVnd(selectedSessionPricing.totalFee)}</strong></div>
-                  <button type="button" className="btn btn-primary btn-lg" disabled={busy} onClick={handleStopSession}>
+                  <p className="muted-sm">
+                    Bàn vẫn đang tính giờ. Hãy kết thúc bàn để chốt thời gian và số tiền; sau đó hóa đơn cùng mã QR chuyển khoản mới xuất hiện.
+                  </p>
+                  <div className="info-box">
+                    <div className="live-row">
+                      <span>Tiền giờ tạm tính</span>
+                      <strong className="num">{formatVnd(selectedSessionPricing.tableFee)}</strong>
+                    </div>
+                    <div className="live-row">
+                      <span>Tiền đồ uống / ăn</span>
+                      <strong className="num">{formatVnd(selectedSessionPricing.itemsFee)}</strong>
+                    </div>
+                    <div className="live-row live-total">
+                      <span>Tạm tính hiện tại</span>
+                      <strong className="num text-brass">{formatVnd(selectedSessionPricing.totalFee)}</strong>
+                    </div>
+                  </div>
+                  <button type="button" className="btn btn-primary btn-lg btn-block" disabled={busy} onClick={handleStopSession}>
                     {busy ? 'Đang kết thúc bàn...' : 'Kết thúc bàn & chốt hóa đơn'}
                   </button>
                 </div>
@@ -831,29 +903,39 @@ export function TablesView({
                         <span>Tiền đồ uống &amp; đồ ăn</span>
                         <strong className="num">{formatVnd(selectedSessionPricing.itemsFee)}</strong>
                       </div>
-                      {(selectedSession.session_items || []).map((item) => <div className="live-row" key={item.id}>
-                        <span>{item.item_name_snapshot} × {item.quantity}</span>
-                        <span className="num">{formatVnd(item.unit_price_snapshot * item.quantity)}</span>
-                      </div>)}
+                      {(selectedSession.session_items || []).map((item) => (
+                        <div className="live-row muted-sm" key={item.id}>
+                          <span>{item.item_name_snapshot} × {item.quantity}</span>
+                          <span className="num">{formatVnd(item.unit_price_snapshot * item.quantity)}</span>
+                        </div>
+                      ))}
                       <div className="live-row">
                         <span>Tạm tính</span>
                         <strong className="num">{formatVnd(selectedSessionPricing.totalFee)}</strong>
                       </div>
-                      {tableDiscount.amount > 0 && <div className="live-row">
-                        <span>Giảm giá</span>
-                        <strong className="num">−{formatVnd(tableDiscount.amount)}</strong>
-                      </div>}
+                      {tableDiscount.amount > 0 && (
+                        <div className="live-row">
+                          <span>Giảm giá</span>
+                          <strong className="num text-danger">−{formatVnd(tableDiscount.amount)}</strong>
+                        </div>
+                      )}
                       <div className="live-row live-total">
                         <span>Khách thanh toán</span>
-                        <strong className="num">{formatVnd(tableAmountDue)}</strong>
+                        <strong className="num text-brass">{formatVnd(tableAmountDue)}</strong>
                       </div>
                     </div>
                   </div>
 
                   <div className="panel-box form-stack">
                     <h4>Xác nhận hóa đơn</h4>
-                    <DiscountFields subtotal={selectedSessionPricing.totalFee} type={discountType} value={discountValue}
-                      onTypeChange={setDiscountType} onValueChange={setDiscountValue} disabled={busy} />
+                    <DiscountFields
+                      subtotal={selectedSessionPricing.totalFee}
+                      type={discountType}
+                      value={discountValue}
+                      onTypeChange={setDiscountType}
+                      onValueChange={setDiscountValue}
+                      disabled={busy}
+                    />
                     <div className="field">
                       <span>Phương thức thanh toán</span>
                       <div className="payment-methods">

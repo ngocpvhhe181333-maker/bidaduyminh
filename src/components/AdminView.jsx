@@ -221,10 +221,20 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
     setSuccess('Đã khôi phục dữ liệu Demo mặc định.')
   }
 
+  function openEditTableModal(t) {
+    setTableModal({
+      ...t,
+      custom_hourly_rate: t.custom_hourly_rate ?? '',
+      custom_rounding_minutes: t.custom_rounding_minutes ?? '',
+      custom_rounding_mode: t.custom_rounding_mode ?? '',
+      custom_min_minutes: t.custom_min_minutes ?? '',
+    })
+  }
+
   return (
     <div className="page-stack">
       <div className="admin-topbar">
-        <div className="tab-pills">
+        <div className="tab-pills scrollable-pills">
           <button
             type="button"
             className={`tab-pill ${subTab === 'tables' ? 'active' : ''}`}
@@ -290,7 +300,7 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
             </div>
           </div>
 
-          <div className="table-wrap">
+          <div className="table-wrap desktop-only-table">
             <table className="data-table">
               <thead>
                 <tr>
@@ -315,7 +325,7 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
                       <td>{eff.typeName}</td>
                       <td>
                         <div className="num">
-                          <strong>{formatVnd(eff.hourlyRate)}/giờ</strong>{' '}
+                          <strong className="text-brass">{formatVnd(eff.hourlyRate)}/giờ</strong>{' '}
                           {eff.hasCustomOverride && <span className="badge">Giá riêng</span>}
                         </div>
                         <div className="muted-xs">
@@ -337,15 +347,7 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
                           <button
                             type="button"
                             className="btn btn-sm btn-outline"
-                            onClick={() =>
-                              setTableModal({
-                                ...t,
-                                custom_hourly_rate: t.custom_hourly_rate ?? '',
-                                custom_rounding_minutes: t.custom_rounding_minutes ?? '',
-                                custom_rounding_mode: t.custom_rounding_mode ?? '',
-                                custom_min_minutes: t.custom_min_minutes ?? '',
-                              })
-                            }
+                            onClick={() => openEditTableModal(t)}
                           >
                             Sửa
                           </button>
@@ -366,6 +368,58 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
                 })}
               </tbody>
             </table>
+          </div>
+
+          <div className="mobile-card-list mobile-only-cards">
+            {tables.map((t) => {
+              const eff = getEffectiveTablePricing(t, tableTypesMap)
+              return (
+                <div key={t.id} className="mobile-data-card">
+                  <div className="mobile-card-top">
+                    <div>
+                      <strong>
+                        #{t.table_number} • {t.name}
+                      </strong>
+                      <div className="muted-xs">{eff.typeName}</div>
+                    </div>
+                    <span className={`status-pill status-${t.status}`}>
+                      {t.status === 'available'
+                        ? 'Trống'
+                        : t.status === 'playing'
+                          ? 'Đang chơi'
+                          : 'Bảo trì'}
+                    </span>
+                  </div>
+                  <div className="num">
+                    <strong className="text-brass">{formatVnd(eff.hourlyRate)}/giờ</strong>{' '}
+                    {eff.hasCustomOverride && <span className="badge">Giá riêng</span>}
+                  </div>
+                  <div className="muted-xs">
+                    {getRoundingLabel(eff.roundingMode, eff.roundingMinutes, eff.minMinutes)}
+                  </div>
+                  {t.notes && <div className="muted-xs">Ghi chú: {t.notes}</div>}
+                  <div className="row-actions wrap">
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline"
+                      onClick={() => openEditTableModal(t)}
+                    >
+                      Sửa bàn
+                    </button>
+                    {t.status !== 'playing' && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-ghost"
+                        disabled={busy}
+                        onClick={() => handleToggleMaintenance(t)}
+                      >
+                        {t.status === 'maintenance' ? 'Mở lại bàn' : 'Đặt bảo trì'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
@@ -397,7 +451,7 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
             </button>
           </div>
 
-          <div className="table-wrap">
+          <div className="table-wrap desktop-only-table">
             <table className="data-table">
               <thead>
                 <tr>
@@ -414,7 +468,7 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
                       <strong>{tt.name}</strong>
                     </td>
                     <td className="num">
-                      <strong>{formatVnd(tt.hourly_rate)}/giờ</strong>
+                      <strong className="text-brass">{formatVnd(tt.hourly_rate)}/giờ</strong>
                     </td>
                     <td>{getRoundingLabel(tt.rounding_mode, tt.rounding_minutes, tt.min_minutes)}</td>
                     <td>
@@ -439,6 +493,36 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="mobile-card-list mobile-only-cards">
+            {tableTypes.map((tt) => (
+              <div key={tt.id} className="mobile-data-card">
+                <div className="mobile-card-top">
+                  <strong>{tt.name}</strong>
+                  <strong className="num text-brass">{formatVnd(tt.hourly_rate)}/giờ</strong>
+                </div>
+                <div className="muted-xs">
+                  {getRoundingLabel(tt.rounding_mode, tt.rounding_minutes, tt.min_minutes)}
+                </div>
+                <div className="row-actions wrap">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline"
+                    onClick={() => setTypeModal({ ...tt })}
+                  >
+                    Sửa
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-ghost-danger"
+                    onClick={() => handleDeleteTableType(tt.id)}
+                  >
+                    Xóa
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -471,7 +555,7 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
             </button>
           </div>
 
-          <div className="table-wrap">
+          <div className="table-wrap desktop-only-table">
             <table className="data-table">
               <thead>
                 <tr>
@@ -496,7 +580,7 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
                     <td>{m.category}</td>
                     <td>{m.unit}</td>
                     <td className="num">
-                      <strong>{formatVnd(m.price)}</strong>
+                      <strong className="text-brass">{formatVnd(m.price)}</strong>
                     </td>
                     <td className="num">{m.purchase_price == null ? 'Chưa nhập' : formatVnd(m.purchase_price)}</td>
                     <td className="num">{m.stock_quantity == null ? 'Chưa theo dõi' : `${m.stock_quantity} ${m.unit}`}</td>
@@ -539,6 +623,69 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
               </tbody>
             </table>
           </div>
+
+          <div className="mobile-card-list mobile-only-cards">
+            {menuItems.map((m) => (
+              <div key={m.id} className={`mobile-data-card ${!m.is_active ? 'row-muted' : ''}`}>
+                <div className="mobile-card-top">
+                  <div>
+                    <strong>{m.name}</strong>
+                    <div className="muted-xs">
+                      {m.category} • {m.unit}
+                    </div>
+                  </div>
+                  <span className={`status-pill ${m.is_active && m.stock_quantity !== 0 ? 'status-available' : 'status-closed'}`}>
+                    {!m.is_active ? 'Ngừng bán' : m.stock_quantity === 0 ? 'Hết hàng' : 'Còn bán'}
+                  </span>
+                </div>
+
+                <div className="mobile-card-grid">
+                  <div>
+                    <span className="muted-xs">Giá bán</span>
+                    <strong className="num text-brass">{formatVnd(m.price)}</strong>
+                  </div>
+                  <div>
+                    <span className="muted-xs">Giá nhập</span>
+                    <span className="num">{m.purchase_price == null ? 'Chưa nhập' : formatVnd(m.purchase_price)}</span>
+                  </div>
+                  <div>
+                    <span className="muted-xs">Tồn kho</span>
+                    <span className="num">{m.stock_quantity == null ? 'Không theo dõi' : `${m.stock_quantity} ${m.unit}`}</span>
+                  </div>
+                  <div>
+                    <span className="muted-xs">Lãi gộp/món</span>
+                    <span className="num">{m.purchase_price == null ? '—' : formatVnd(m.price - m.purchase_price)}</span>
+                  </div>
+                </div>
+
+                <div className="row-actions wrap">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline"
+                    onClick={() => setMenuModal({ ...m })}
+                  >
+                    Sửa
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-ghost"
+                    disabled={busy}
+                    onClick={() => handleToggleMenuActive(m)}
+                  >
+                    {m.is_active ? 'Ngừng bán' : 'Bán lại'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-ghost-danger"
+                    disabled={busy}
+                    onClick={() => handleDeleteMenuItem(m)}
+                  >
+                    Xóa
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -571,51 +718,82 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
           {loadingProfiles ? (
             <p className="muted-sm">Đang tải tài khoản...</p>
           ) : (
-            <div className="table-wrap">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Họ tên</th>
-                    <th>Email</th>
-                    <th>Vai trò</th>
-                    <th>Trạng thái</th>
-                    <th>Ngày tạo</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {profiles.map((p) => (
-                    <tr key={p.id}>
-                      <td>
+            <>
+              <div className="table-wrap desktop-only-table">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Họ tên</th>
+                      <th>Email</th>
+                      <th>Vai trò</th>
+                      <th>Trạng thái</th>
+                      <th>Ngày tạo</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {profiles.map((p) => (
+                      <tr key={p.id}>
+                        <td>
+                          <strong>{p.full_name}</strong>
+                          {p.id === currentProfile?.id && <span className="badge" style={{ marginLeft: 6 }}>Bạn</span>}
+                        </td>
+                        <td>{p.email}</td>
+                        <td>
+                          <span className={`role-badge ${p.role}`}>
+                            {p.role === 'admin' ? 'Admin' : 'Thu ngân'}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`status-pill ${p.is_active ? 'status-available' : 'status-maintenance'}`}>
+                            {p.is_active ? 'Hoạt động' : 'Chờ duyệt / Khóa'}
+                          </span>
+                        </td>
+                        <td className="muted-xs">{formatDateTime(p.created_at)}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline"
+                            onClick={() => setProfileModal({ ...p })}
+                          >
+                            Phân quyền / Sửa
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mobile-card-list mobile-only-cards">
+                {profiles.map((p) => (
+                  <div key={p.id} className="mobile-data-card">
+                    <div className="mobile-card-top">
+                      <div>
                         <strong>{p.full_name}</strong>
                         {p.id === currentProfile?.id && <span className="badge" style={{ marginLeft: 6 }}>Bạn</span>}
-                      </td>
-                      <td>{p.email}</td>
-                      <td>
-                        <span className={`role-badge ${p.role}`}>
-                          {p.role === 'admin' ? 'Admin' : 'Thu ngân'}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`status-pill ${p.is_active ? 'status-available' : 'status-maintenance'}`}>
-                          {p.is_active ? 'Hoạt động' : 'Chờ duyệt / Khóa'}
-                        </span>
-                      </td>
-                      <td className="muted-xs">{formatDateTime(p.created_at)}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-outline"
-                          onClick={() => setProfileModal({ ...p })}
-                        >
-                          Phân quyền / Sửa
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        <div className="muted-xs">{p.email}</div>
+                      </div>
+                      <span className={`role-badge ${p.role}`}>
+                        {p.role === 'admin' ? 'Admin' : 'Thu ngân'}
+                      </span>
+                    </div>
+                    <div className="mobile-card-foot">
+                      <span className={`status-pill ${p.is_active ? 'status-available' : 'status-maintenance'}`}>
+                        {p.is_active ? 'Hoạt động' : 'Chờ duyệt / Khóa'}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline"
+                        onClick={() => setProfileModal({ ...p })}
+                      >
+                        Phân quyền / Sửa
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
@@ -624,9 +802,10 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
       {typeModal && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal-card modal-sm">
+            <div className="modal-sheet-handle" aria-hidden="true" />
             <div className="modal-header">
               <h3>{typeModal.id ? 'Sửa loại bàn' : 'Thêm loại bàn'}</h3>
-              <button type="button" className="btn btn-ghost" onClick={() => setTypeModal(null)}>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setTypeModal(null)}>
                 Đóng
               </button>
             </div>
@@ -704,9 +883,10 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
       {tableModal && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal-card modal-sm">
+            <div className="modal-sheet-handle" aria-hidden="true" />
             <div className="modal-header">
               <h3>Cấu hình {tableModal.name}</h3>
-              <button type="button" className="btn btn-ghost" onClick={() => setTableModal(null)}>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setTableModal(null)}>
                 Đóng
               </button>
             </div>
@@ -801,9 +981,10 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
       {menuModal && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal-card modal-sm">
+            <div className="modal-sheet-handle" aria-hidden="true" />
             <div className="modal-header">
               <h3>{menuModal.id ? 'Sửa món' : 'Thêm món mới'}</h3>
-              <button type="button" className="btn btn-ghost" onClick={() => setMenuModal(null)}>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setMenuModal(null)}>
                 Đóng
               </button>
             </div>
@@ -896,9 +1077,10 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
       {profileModal && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal-card modal-sm">
+            <div className="modal-sheet-handle" aria-hidden="true" />
             <div className="modal-header">
               <h3>Cập nhật tài khoản</h3>
-              <button type="button" className="btn btn-ghost" onClick={() => setProfileModal(null)}>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setProfileModal(null)}>
                 Đóng
               </button>
             </div>
@@ -949,9 +1131,10 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
       {newUserModal && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal-card modal-sm">
+            <div className="modal-sheet-handle" aria-hidden="true" />
             <div className="modal-header">
               <h3>Tạo tài khoản nhân sự</h3>
-              <button type="button" className="btn btn-ghost" onClick={() => setNewUserModal(null)}>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setNewUserModal(null)}>
                 Đóng
               </button>
             </div>

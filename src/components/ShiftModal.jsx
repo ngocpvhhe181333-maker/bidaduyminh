@@ -49,9 +49,10 @@ export function ShiftModal({ mode, openShift, openShiftSummary, onClose, onCompl
       aria-label={mode === 'open' ? 'Mở ca làm việc' : 'Chốt ca làm việc'}
     >
       <div className="modal-card modal-sm">
+        <div className="modal-sheet-handle" aria-hidden="true" />
         <div className="modal-header">
           <h3>{mode === 'open' ? 'Mở ca làm việc' : 'Chốt ca & Đối soát tiền mặt'}</h3>
-          <button type="button" className="btn btn-ghost" onClick={onClose}>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
             Đóng
           </button>
         </div>
@@ -115,11 +116,11 @@ export function ShiftModal({ mode, openShift, openShiftSummary, onClose, onCompl
                 />
               </label>
 
-              <div className="live-row" style={{ padding: '0.5rem 0.75rem', background: '#f8fafc', borderRadius: 8 }}>
+              <div className="live-row info-box-inline">
                 <span>Chênh lệch cuối ca</span>
                 <strong
                   className={`num ${
-                    previewDiff === 0 ? 'text-green' : previewDiff > 0 ? 'text-primary' : 'text-danger'
+                    previewDiff === 0 ? 'text-green' : previewDiff > 0 ? 'text-brass' : 'text-danger'
                   }`}
                 >
                   {previewDiff > 0 ? `+${formatVnd(previewDiff)}` : formatVnd(previewDiff)}

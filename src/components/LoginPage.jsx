@@ -1,7 +1,7 @@
 import { useState } from 'react'
+import { shop } from '../config/shop'
 import { api, isDemoMode } from '../services/api'
 import { BilliardIcon } from './Icons'
-import { shop } from '../config/shop'
 
 export function LoginPage({ onAuthenticated }) {
   const [email, setEmail] = useState('')
@@ -38,22 +38,30 @@ export function LoginPage({ onAuthenticated }) {
 
   return (
     <div className="login-page">
+      <div className="login-felt-backdrop" aria-hidden="true">
+        <div className="rack-balls">
+          <span className="pool-ball ball-1">1</span>
+          <span className="pool-ball ball-9">9</span>
+          <span className="pool-ball ball-8">8</span>
+        </div>
+      </div>
+
       <div className="login-card">
         <div className="login-brand">
           <div className="brand-badge">
-            <BilliardIcon size={26} />
+            <BilliardIcon size={28} />
           </div>
           <div>
+            <div className="login-eyebrow">BILLIARDS CLUB POS</div>
             <h1>{shop.name}</h1>
-            <p>Hệ thống quản lý 5 bàn, tính giờ &amp; thu ngân</p>
+            <p>{shop.address}</p>
           </div>
         </div>
 
         {isDemoMode && (
           <div className="alert alert-warning">
             <strong>Chế độ dùng thử (Demo):</strong> Bản build chưa nhận được URL và publishable key của
-            Supabase. Khi chạy trên máy, kiểm tra <code>.env.local</code>; trên Vercel, kiểm tra Environment
-            Variables rồi triển khai lại. Dữ liệu Demo chỉ lưu trong trình duyệt.
+            Supabase. Dữ liệu Demo chỉ lưu trong trình duyệt.
           </div>
         )}
 
@@ -61,7 +69,7 @@ export function LoginPage({ onAuthenticated }) {
 
         <form onSubmit={handleSubmit} className="form-stack">
           <label className="field">
-            <span>Email</span>
+            <span>Email nhân sự</span>
             <input
               type="email"
               required
@@ -85,8 +93,8 @@ export function LoginPage({ onAuthenticated }) {
             />
           </label>
 
-          <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
-            {loading ? 'Đang xử lý...' : 'Đăng nhập'}
+          <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={loading}>
+            {loading ? 'Đang vào ca...' : 'Đăng nhập hệ thống'}
           </button>
         </form>
 
@@ -104,7 +112,7 @@ export function LoginPage({ onAuthenticated }) {
               </button>
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="btn btn-brass"
                 disabled={loading}
                 onClick={() => handleDemoQuickLogin('admin')}
               >

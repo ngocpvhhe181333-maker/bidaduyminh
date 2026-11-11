@@ -325,6 +325,20 @@ export const supabaseAdapter = {
     return Array.isArray(data) ? data[0] || null : data
   },
 
+  async deleteShift(shiftId) {
+    const client = requireSupabase()
+    const { data, error } = await client.rpc('admin_delete_shift', {
+      p_shift_id: shiftId,
+    })
+    if (error?.code === 'PGRST202') {
+      throw new Error(
+        'Chưa bật tính năng xóa ca trên Supabase. Hãy chạy file supabase/delete_shift_migration.sql trong SQL Editor.'
+      )
+    }
+    if (error) throw formatError(error)
+    return data
+  },
+
   async fetchInvoices({ startDate, endDate, tableId, paymentMethod, status } = {}) {
     const client = requireSupabase()
     const { startIso, endIso } = buildDateRangeIso(startDate, endDate)
@@ -383,20 +397,37 @@ export const supabaseAdapter = {
     return this.fetchInvoiceDetail(invoice.id)
   },
 
-  async fetchReportsData({ startDate, endDate }) {
+  async fetchReportsData({ startDate, endDate, prevStartDate, prevEndDate }) {
     const client = requireSupabase()
     const { startIso, endIso } = buildDateRangeIso(startDate, endDate)
+    const { startIso: prevStartIso, endIso: prevEndIso } = buildDateRangeIso(prevStartDate, prevEndDate)
 
     const makeInvoiceQuery = () => {
       let query = client
         .from('invoices')
-        .select('*, invoice_items(purchase_price_snapshot, line_cost)')
+        .select(
+          '*, invoice_items(id, menu_item_id, item_name, unit, unit_price, quantity, line_total, purchase_price_snapshot, line_cost)'
+        )
         .order('paid_at', { ascending: false })
         .order('id', { ascending: false })
       if (startIso) query = query.gte('paid_at', startIso)
       if (endIso) query = query.lte('paid_at', endIso)
       return query
     }
+
+    const makePrevInvoiceQuery = () => {
+      let query = client
+        .from('invoices')
+        .select(
+          'id, total_amount, table_fee, items_fee, discount_amount, status, sale_type, table_id, table_type_name, payment_method, paid_at, invoice_items(line_cost)'
+        )
+        .order('paid_at', { ascending: false })
+        .order('id', { ascending: false })
+      if (prevStartIso) query = query.gte('paid_at', prevStartIso)
+      if (prevEndIso) query = query.lte('paid_at', prevEndIso)
+      return query
+    }
+
     const makeOpenedShiftQuery = () => {
       let query = client.from('shifts').select('*').order('opened_at', { ascending: false }).order('id', { ascending: false })
       if (startIso) query = query.gte('opened_at', startIso)
@@ -404,12 +435,45 @@ export const supabaseAdapter = {
       return query
     }
 
-    const [invoices, openedShifts, tablesRes] = await Promise.all([
+    const fetchCashTransactionsSafe = async () => {
+      try {
+        let query = client
+          .from('cash_transactions')
+          .select('*')
+          .order('occurred_at', { ascending: false })
+          .order('id', { ascending: false })
+        if (startIso) query = query.gte('occurred_at', startIso)
+        if (endIso) query = query.lte('occurred_at', endIso)
+        const { data, error } = await query.limit(500)
+        if (error) {
+          if (
+            error.code === '42P01' ||
+            error.code === 'PGRST205' ||
+            (error.message || '').includes('cash_transactions')
+          ) {
+            return { rows: [], ready: false }
+          }
+          throw formatError(error)
+        }
+        return { rows: data || [], ready: true }
+      } catch (err) {
+        if ((err?.message || '').includes('cash_transactions')) {
+          return { rows: [], ready: false }
+        }
+        throw err
+      }
+    }
+
+    const [invoices, prevInvoices, openedShifts, tablesRes, typesRes, cashTxResult] = await Promise.all([
       fetchAllPages(makeInvoiceQuery),
+      prevStartIso && prevEndIso ? fetchAllPages(makePrevInvoiceQuery) : Promise.resolve([]),
       fetchAllPages(makeOpenedShiftQuery),
       client.from('billiard_tables').select('*').order('table_number', { ascending: true }),
+      client.from('table_types').select('*').order('hourly_rate', { ascending: true }),
+      fetchCashTransactionsSafe(),
     ])
     if (tablesRes.error) throw formatError(tablesRes.error)
+    if (typesRes.error) throw formatError(typesRes.error)
 
     const shiftsById = new Map(openedShifts.map((shift) => [shift.id, shift]))
     const missingShiftIds = [...new Set(invoices.map((invoice) => invoice.shift_id))]
@@ -436,10 +500,37 @@ export const supabaseAdapter = {
 
     return {
       invoices,
+      prevInvoices,
       shifts: [...shiftsById.values()].sort((a, b) => new Date(b.opened_at) - new Date(a.opened_at)),
       tables: tablesRes.data || [],
+      tableTypes: typesRes.data || [],
       transfers,
+      cashTransactions: cashTxResult.rows,
+      cashTransactionsReady: cashTxResult.ready,
     }
+  },
+
+  async createCashTransaction({ txType, category, amount, paymentMethod, occurredAt, description }) {
+    const client = requireSupabase()
+    const { data, error } = await client.rpc('admin_create_cash_transaction', {
+      p_tx_type: txType,
+      p_category: category,
+      p_amount: Number(amount) || 0,
+      p_payment_method: paymentMethod || 'cash',
+      p_occurred_at: occurredAt || new Date().toISOString(),
+      p_description: description,
+    })
+    if (error?.code === 'PGRST202') {
+      throw new Error('Chưa tạo bảng Thu/Chi trên Supabase. Hãy chạy file supabase/cash_transactions_migration.sql trong SQL Editor.')
+    }
+    if (error) throw formatError(error)
+    return data
+  },
+
+  async deleteCashTransaction(id) {
+    const client = requireSupabase()
+    const { error } = await client.from('cash_transactions').delete().eq('id', id)
+    if (error) throw formatError(error)
   },
 
   async saveTableType(payload) {

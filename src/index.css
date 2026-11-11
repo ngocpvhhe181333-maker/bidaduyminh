@@ -1,24 +1,52 @@
 :root {
-  --bg: #f1f5f9;
+  /* Light-Tone Billiard Club POS Palette */
+  --bg: #f2f5f3;
+  --bg-glow: radial-gradient(ellipse 90% 45% at 50% -5%, rgba(13, 122, 85, 0.09), transparent 70%);
   --surface: #ffffff;
-  --surface-soft: #f8fafc;
-  --border: #e2e8f0;
+  --surface-elevated: #ffffff;
+  --surface-soft: #f7faf8;
+  --surface-hover: #edf3ef;
+
+  /* Pool Cloth & Wood Rail (dùng cho 5 bàn bi-a) */
+  --felt-top: #0f6b4a;
+  --felt-bottom: #094b33;
+  --felt-idle-top: #127853;
+  --felt-idle-bottom: #0c553b;
+
+  /* Borders & Dividers */
+  --border: #dce5df;
+  --border-strong: #c2d0c8;
+
+  /* Text */
   --text: #0f172a;
+  --text-secondary: #334155;
   --muted: #64748b;
-  --primary: #0f766e;
-  --primary-hover: #0d5e57;
-  --primary-soft: #ccfbf1;
-  --amber: #d97706;
+
+  /* Accents: Billiard Emerald & Antique Brass */
+  --primary: #0d7a55;
+  --primary-hover: #0a6345;
+  --primary-soft: #e6f6ef;
+  --brass: #a16207;
+  --brass-bright: #b45309;
+  --brass-soft: #fef3c7;
+
+  /* Semantic Status */
+  --amber: #b45309;
   --amber-soft: #fef3c7;
-  --green: #059669;
-  --green-soft: #d1fae5;
+  --green: #047857;
+  --green-soft: #dcfce7;
+  --sky: #0369a1;
+  --sky-soft: #e0f2fe;
   --danger: #dc2626;
   --danger-soft: #fee2e2;
-  --radius: 12px;
-  --shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-lg: 0 20px 45px rgba(15, 23, 42, 0.18);
 
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow: 0 2px 8px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 20px 48px rgba(15, 23, 42, 0.18);
+
+  font-family: 'Be Vietnam Pro', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: light;
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
@@ -28,13 +56,19 @@
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
+html,
 body {
   margin: 0;
+  padding: 0;
   min-width: 320px;
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: var(--bg-glow);
+  background-attachment: fixed;
   color: var(--text);
+  overflow-x: clip;
 }
 
 button,
@@ -42,12 +76,27 @@ input,
 select,
 textarea {
   font: inherit;
+  color: inherit;
 }
 
 h1, h2, h3, h4, p {
   margin: 0;
 }
 
+code {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  background: #e2e8f0;
+  color: #0f172a;
+  padding: 0.12rem 0.35rem;
+  border-radius: 5px;
+  font-size: 0.85em;
+}
+
 .num {
+  font-variant-numeric: tabular-nums;
+}
+
+.mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
   font-variant-numeric: tabular-nums;
 }

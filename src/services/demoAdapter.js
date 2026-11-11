@@ -842,6 +842,34 @@ export const demoAdapter = {
     return computeShiftSummaryFromState(state, shiftId)
   },
 
+  async deleteShift(shiftId) {
+    const state = loadState()
+    requireAdmin(state)
+    const target = state.shifts.find((s) => s.id === shiftId)
+    if (!target) {
+      throw new Error('Không tìm thấy ca làm việc cần xóa.')
+    }
+    if (target.status !== 'closed') {
+      throw new Error('Không thể xóa ca đang mở. Vui lòng chốt ca trước khi xóa.')
+    }
+
+    let detachedInvoices = 0
+    for (const inv of state.invoices) {
+      if (inv.shift_id === shiftId) {
+        inv.shift_id = null
+        detachedInvoices += 1
+      }
+    }
+
+    state.shifts = state.shifts.filter((s) => s.id !== shiftId)
+    saveState(state)
+    notifyListeners({ type: 'shifts_changed' })
+    return {
+      deleted_shift_id: shiftId,
+      detached_invoices: detachedInvoices,
+    }
+  },
+
   async fetchInvoices({ startDate, endDate, tableId, paymentMethod, status } = {}) {
     const state = loadState()
     const user = requireStaff(state)
@@ -957,11 +985,13 @@ export const demoAdapter = {
     return enrichInvoice(state, inv)
   },
 
-  async fetchReportsData({ startDate, endDate }) {
+  async fetchReportsData({ startDate, endDate, prevStartDate, prevEndDate }) {
     const state = loadState()
     requireAdmin(state)
     const startMs = startDate ? new Date(`${startDate}T00:00:00`).getTime() : null
     const endMs = endDate ? new Date(`${endDate}T23:59:59.999`).getTime() : null
+    const prevStartMs = prevStartDate ? new Date(`${prevStartDate}T00:00:00`).getTime() : null
+    const prevEndMs = prevEndDate ? new Date(`${prevEndDate}T23:59:59.999`).getTime() : null
 
     const invoices = state.invoices.filter((inv) => {
       const ms = new Date(inv.paid_at).getTime()
@@ -969,11 +999,29 @@ export const demoAdapter = {
       if (endMs && ms > endMs) return false
       return true
     }).map((inv) => enrichInvoice(state, inv))
+
+    const prevInvoices =
+      prevStartMs && prevEndMs
+        ? state.invoices
+            .filter((inv) => {
+              const ms = new Date(inv.paid_at).getTime()
+              return ms >= prevStartMs && ms <= prevEndMs
+            })
+            .map((inv) => enrichInvoice(state, inv))
+        : []
+
     const invoiceShiftIds = new Set(invoices.map((inv) => inv.shift_id))
     const invoiceSessionIds = new Set(invoices.map((inv) => inv.session_id))
+    const cashTransactions = (state.cashTransactions || []).filter((tx) => {
+      const ms = new Date(tx.occurred_at).getTime()
+      if (startMs && ms < startMs) return false
+      if (endMs && ms > endMs) return false
+      return true
+    }).sort((a, b) => new Date(b.occurred_at) - new Date(a.occurred_at))
 
     return {
       invoices,
+      prevInvoices,
       shifts: state.shifts.filter((sh) => {
         if (invoiceShiftIds.has(sh.id)) return true
         const ms = new Date(sh.opened_at).getTime()
@@ -982,8 +1030,44 @@ export const demoAdapter = {
         return true
       }),
       tables: [...state.tables].sort((a, b) => a.table_number - b.table_number),
+      tableTypes: [...state.tableTypes].sort((a, b) => a.hourly_rate - b.hourly_rate),
       transfers: state.sessionTransfers.filter((transfer) => invoiceSessionIds.has(transfer.session_id)),
+      cashTransactions,
+      cashTransactionsReady: true,
     }
+  },
+
+  async createCashTransaction({ txType, category, amount, paymentMethod, occurredAt, description }) {
+    const state = loadState()
+    const admin = requireAdmin(state)
+    const num = Number(amount) || 0
+    if (num <= 0) throw new Error('Số tiền phải lớn hơn 0.')
+    if (!description || description.trim().length < 2) {
+      throw new Error('Vui lòng nhập nội dung phiếu (tối thiểu 2 ký tự).')
+    }
+    if (!state.cashTransactions) state.cashTransactions = []
+    const row = {
+      id: uuid(),
+      tx_type: txType === 'income' ? 'income' : 'expense',
+      category: category || (txType === 'income' ? 'Thu khác' : 'Chi phí khác'),
+      amount: num,
+      payment_method: paymentMethod === 'transfer' ? 'transfer' : 'cash',
+      occurred_at: occurredAt || new Date().toISOString(),
+      description: description.trim(),
+      created_by: admin.id,
+      created_by_name: admin.full_name,
+      created_at: new Date().toISOString(),
+    }
+    state.cashTransactions.unshift(row)
+    saveState(state)
+    return row
+  },
+
+  async deleteCashTransaction(id) {
+    const state = loadState()
+    requireAdmin(state)
+    state.cashTransactions = (state.cashTransactions || []).filter((tx) => tx.id !== id)
+    saveState(state)
   },
 
   async saveTableType(payload) {

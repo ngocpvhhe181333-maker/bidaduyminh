@@ -1,9 +1,21 @@
 export function BilliardIcon({ size = 20 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="9" />
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 9V7.5" />
+      <circle cx="12" cy="12" r="9.5" />
+      <circle cx="12" cy="12" r="3.6" />
+      <path d="M12 8.4V6.5" />
+    </svg>
+  )
+}
+
+export function PoolTableIcon({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2.5" y="5" width="19" height="14" rx="2.5" />
+      <rect x="5" y="7.5" width="14" height="9" rx="1" />
+      <circle cx="8.5" cy="12" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="10.5" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="13.5" r="1.2" fill="currentColor" stroke="none" />
     </svg>
   )
 }
