@@ -415,22 +415,13 @@ export const supabaseAdapter = {
     if (startIso) shiftQuery = shiftQuery.gte('opened_at', startIso)
     if (endIso) shiftQuery = shiftQuery.lte('opened_at', endIso)
 
-    let expensesQuery = client
-      .from('operating_expenses')
-      .select('*')
-      .order('spent_at', { ascending: false })
-      .limit(1000)
-    if (startIso) expensesQuery = expensesQuery.gte('spent_at', startIso)
-    if (endIso) expensesQuery = expensesQuery.lte('spent_at', endIso)
-
-    const [invRes, shiftRes, tablesRes, expensesRes] = await Promise.all([
+    const [invRes, shiftRes, tablesRes] = await Promise.all([
       invQuery,
       shiftQuery,
       client.from('billiard_tables').select('*').order('table_number', { ascending: true }),
-      expensesQuery,
     ])
 
-    for (const res of [invRes, shiftRes, tablesRes, expensesRes]) {
+    for (const res of [invRes, shiftRes, tablesRes]) {
       if (res.error) throw formatError(res.error)
     }
 
@@ -438,29 +429,7 @@ export const supabaseAdapter = {
       invoices: invRes.data || [],
       shifts: shiftRes.data || [],
       tables: tablesRes.data || [],
-      expenses: expensesRes.data || [],
     }
-  },
-
-  async saveExpense({ id, spentAt, category, description, amount }) {
-    const client = requireSupabase()
-    const body = {
-      spent_at: spentAt,
-      category: category.trim(),
-      description: description.trim(),
-      amount: Number(amount),
-    }
-    if (id) {
-      const { data, error } = await client.from('operating_expenses').update(body).eq('id', id).select().single()
-      if (error) throw formatError(error)
-      return data
-    }
-    const { data: authData, error: authError } = await client.auth.getUser()
-    if (authError || !authData.user) throw new Error('Vui lòng đăng nhập lại.')
-    const { data, error } = await client.from('operating_expenses')
-      .insert({ ...body, created_by: authData.user.id }).select().single()
-    if (error) throw formatError(error)
-    return data
   },
 
   async saveTableType(payload) {

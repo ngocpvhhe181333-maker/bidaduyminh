@@ -50,7 +50,7 @@
 - Doanh thu theo ngày và theo ca; tách tiền giờ chơi và tiền bán món.
 - Số phiên chơi và tổng thời gian sử dụng của từng bàn.
 - Danh sách hóa đơn, có lọc theo ngày, bàn và phương thức thanh toán.
-- Lãi gộp từ doanh thu trừ giá vốn món; lãi ròng trừ thêm chi phí vận hành được Admin nhập.
+- Lãi gộp từ doanh thu thực thu trừ giá vốn món đã bán.
 
 ### 7. Đăng nhập và phân quyền
 

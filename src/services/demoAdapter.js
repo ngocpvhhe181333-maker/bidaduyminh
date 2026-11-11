@@ -280,7 +280,6 @@ function createInitialState() {
       },
     ],
     invoiceAdjustments: [],
-    operatingExpenses: [],
   }
 }
 
@@ -982,37 +981,7 @@ export const demoAdapter = {
         return true
       }),
       tables: [...state.tables].sort((a, b) => a.table_number - b.table_number),
-      expenses: (state.operatingExpenses || []).filter((expense) => {
-        const ms = new Date(expense.spent_at).getTime()
-        if (startMs && ms < startMs) return false
-        if (endMs && ms > endMs) return false
-        return true
-      }).sort((a, b) => new Date(b.spent_at).getTime() - new Date(a.spent_at).getTime()),
     }
-  },
-
-  async saveExpense({ id, spentAt, category, description, amount }) {
-    const state = loadState()
-    const user = requireAdmin(state)
-    const value = Number(amount)
-    if (!Number.isInteger(value) || value <= 0 || !category.trim()) {
-      throw new Error('Danh mục và số tiền chi phải hợp lệ.')
-    }
-    if (!state.operatingExpenses) state.operatingExpenses = []
-    if (id) {
-      const expense = state.operatingExpenses.find((item) => item.id === id)
-      if (!expense) throw new Error('Không tìm thấy khoản chi.')
-      Object.assign(expense, { spent_at: spentAt, category: category.trim(), description: description.trim(), amount: value })
-      saveState(state)
-      return expense
-    }
-    const expense = {
-      id: uuid(), spent_at: spentAt, category: category.trim(), description: description.trim(),
-      amount: value, created_by: user.id, created_at: new Date().toISOString(),
-    }
-    state.operatingExpenses.push(expense)
-    saveState(state)
-    return expense
   },
 
   async saveTableType(payload) {

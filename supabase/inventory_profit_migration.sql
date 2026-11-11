@@ -180,30 +180,6 @@ CREATE TRIGGER trg_invoice_items_cost
   BEFORE INSERT ON public.invoice_items
   FOR EACH ROW EXECUTE FUNCTION public.set_invoice_item_cost();
 
--- Ghi chi phí vận hành riêng để không trừ tiền nhập hàng hai lần.
-CREATE TABLE IF NOT EXISTS public.operating_expenses (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  spent_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  category TEXT NOT NULL CHECK (length(trim(category)) > 0),
-  description TEXT NOT NULL DEFAULT '',
-  amount INTEGER NOT NULL CHECK (amount > 0),
-  created_by UUID NOT NULL REFERENCES public.profiles(id),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS idx_operating_expenses_spent_at
-  ON public.operating_expenses (spent_at DESC);
-
-ALTER TABLE public.operating_expenses ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS operating_expenses_admin ON public.operating_expenses;
-CREATE POLICY operating_expenses_admin ON public.operating_expenses
-  FOR ALL TO authenticated
-  USING (public.is_admin())
-  WITH CHECK (public.is_admin());
-
-REVOKE ALL ON public.operating_expenses FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.operating_expenses TO authenticated;
-
 -- Gắn chính xác từng dòng hóa đơn bàn với dòng món đã gọi để giữ giá vốn.
 CREATE OR REPLACE FUNCTION public.checkout_session(
   p_session_id UUID,

@@ -15,12 +15,9 @@ export function ReportsView() {
     return toLocalDateInputValue(d)
   })
   const [endDate, setEndDate] = useState(() => toLocalDateInputValue())
-  const [data, setData] = useState({ invoices: [], shifts: [], tables: [], expenses: [] })
+  const [data, setData] = useState({ invoices: [], shifts: [], tables: [] })
   const [loadedRange, setLoadedRange] = useState('')
   const [error, setError] = useState('')
-  const [expenseForm, setExpenseForm] = useState({ id: null, date: toLocalDateInputValue(), category: 'Điện nước', description: '', amount: '' })
-  const [expenseBusy, setExpenseBusy] = useState(false)
-  const [expenseMessage, setExpenseMessage] = useState('')
 
   const rangeKey = `${startDate}|${endDate}`
   const loading = loadedRange !== rangeKey
@@ -56,29 +53,6 @@ export function ReportsView() {
     setEndDate(toLocalDateInputValue(end))
   }
 
-  async function handleSaveExpense(event) {
-    event.preventDefault()
-    setExpenseBusy(true)
-    setExpenseMessage('')
-    try {
-      await api.saveExpense({
-        id: expenseForm.id,
-        spentAt: new Date(`${expenseForm.date}T12:00:00`).toISOString(),
-        category: expenseForm.category,
-        description: expenseForm.description,
-        amount: Number(expenseForm.amount),
-      })
-      setData(await api.fetchReportsData({ startDate, endDate }))
-      setExpenseForm({ id: null, date: toLocalDateInputValue(), category: 'Điện nước', description: '', amount: '' })
-      setExpenseMessage('Đã lưu khoản chi.')
-      setError('')
-    } catch (err) {
-      setError(err.message || 'Không thể lưu khoản chi.')
-    } finally {
-      setExpenseBusy(false)
-    }
-  }
-
   const report = useMemo(() => {
     const validInvoices = data.invoices.filter((i) => i.status !== 'voided')
     const voidedCount = data.invoices.filter((i) => i.status === 'voided').length
@@ -99,8 +73,6 @@ export function ReportsView() {
         else goodsCost += item.line_cost
       }
     }
-    const operatingExpenseTotal = data.expenses.reduce((sum, expense) => sum + expense.amount, 0)
-
     const byDayMap = {}
     const byTableMap = {}
 
@@ -205,9 +177,7 @@ export function ReportsView() {
       transferRevenue,
       goodsCost,
       unknownCostCount,
-      operatingExpenseTotal,
       grossProfit: totalRevenue - goodsCost,
-      netProfit: totalRevenue - goodsCost - operatingExpenseTotal,
       byDay,
       byTable,
       byShift,
@@ -283,19 +253,17 @@ export function ReportsView() {
       <div className="card">
         <h3>Lợi nhuận trong khoảng thời gian đã chọn</h3>
         <p className="muted-sm" style={{ marginBottom: '0.9rem' }}>
-          Lãi gộp = doanh thu − giá vốn món đã bán. Lãi ròng = lãi gộp − chi phí vận hành.
+          Lãi gộp = doanh thu thực thu − giá vốn món đã bán.
         </p>
         <div className="checkout-breakdown" style={{ maxWidth: 620 }}>
           <div className="live-row"><span>Doanh thu thực thu</span><strong className="num">{formatVnd(report.totalRevenue)}</strong></div>
           <div className="live-row"><span>Giá vốn món đã bán/xuất kho</span><strong className="num">{formatVnd(report.goodsCost)}</strong></div>
-          <div className="live-row"><span>Lãi gộp</span><strong className="num">{report.unknownCostCount ? 'Chưa đủ dữ liệu' : formatVnd(report.grossProfit)}</strong></div>
-          <div className="live-row"><span>Chi phí vận hành</span><strong className="num">{formatVnd(report.operatingExpenseTotal)}</strong></div>
-          <div className="live-row live-total"><span>Lãi ròng</span><strong className="num">{report.unknownCostCount ? 'Chưa đủ dữ liệu' : formatVnd(report.netProfit)}</strong></div>
+          <div className="live-row live-total"><span>Lãi gộp</span><strong className="num">{report.unknownCostCount ? 'Chưa đủ dữ liệu' : formatVnd(report.grossProfit)}</strong></div>
         </div>
         {report.unknownCostCount > 0 && <p className="alert alert-warning" style={{ marginTop: '1rem' }}>
           Có {report.unknownCostCount} dòng món chưa có giá vốn (thường là hóa đơn cũ hoặc món chưa nhập giá nhập). Hãy bổ sung giá nhập để các hóa đơn mới được tính lãi; hóa đơn cũ vẫn thiếu giá vốn gốc.
         </p>}
-        <p className="muted-xs">Giá vốn được ghi khi bán/xuất món. Tiền mua hàng đưa vào tồn kho, không nhập lại như chi phí vận hành để tránh trừ hai lần.</p>
+        <p className="muted-xs">Giá vốn được lưu khi bán hoặc xuất món; các hóa đơn trước khi bật tính năng tồn kho có thể thiếu giá vốn.</p>
       </div>
 
       {loading ? (
@@ -426,30 +394,6 @@ export function ReportsView() {
             )}
           </div>
 
-          <div className="card">
-            <h3>Chi phí vận hành</h3>
-            <p className="muted-sm">Ghi điện, nước, thuê mặt bằng, lương và khoản chi khác. Không ghi tiền nhập hàng ở đây.</p>
-            {expenseMessage && <div className="alert alert-success">{expenseMessage}</div>}
-            <form onSubmit={handleSaveExpense} className="filter-bar" style={{ marginTop: '1rem' }}>
-              <label className="field"><span>Ngày chi</span><input type="date" required value={expenseForm.date} onChange={(e) => setExpenseForm({ ...expenseForm, date: e.target.value })} /></label>
-              <label className="field"><span>Loại chi</span><select value={expenseForm.category} onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}>
-                <option>Điện nước</option><option>Thuê mặt bằng</option><option>Lương</option><option>Khác</option>
-              </select></label>
-              <label className="field"><span>Số tiền (VNĐ)</span><input type="number" min="1" step="1" required value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })} /></label>
-              <label className="field"><span>Ghi chú</span><input type="text" value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })} /></label>
-              <div className="row-actions" style={{ alignItems: 'end' }}>
-                <button type="submit" className="btn btn-primary" disabled={expenseBusy}>{expenseBusy ? 'Đang lưu...' : expenseForm.id ? 'Lưu sửa đổi' : 'Thêm khoản chi'}</button>
-                {expenseForm.id && <button type="button" className="btn btn-ghost" onClick={() => setExpenseForm({ id: null, date: toLocalDateInputValue(), category: 'Điện nước', description: '', amount: '' })}>Hủy sửa</button>}
-              </div>
-            </form>
-            <div className="table-wrap"><table className="data-table"><thead><tr><th>Ngày</th><th>Loại chi</th><th>Ghi chú</th><th className="num">Số tiền</th><th></th></tr></thead><tbody>
-              {data.expenses.map((expense) => <tr key={expense.id}>
-                <td>{formatDateOnly(expense.spent_at)}</td><td>{expense.category}</td><td>{expense.description || '—'}</td><td className="num">{formatVnd(expense.amount)}</td>
-                <td><button type="button" className="btn btn-sm btn-outline" onClick={() => setExpenseForm({ id: expense.id, date: toLocalDateInputValue(new Date(expense.spent_at)), category: expense.category, description: expense.description, amount: expense.amount })}>Sửa</button></td>
-              </tr>)}
-              {data.expenses.length === 0 && <tr><td colSpan={5} className="muted-sm">Chưa có khoản chi trong khoảng thời gian này.</td></tr>}
-            </tbody></table></div>
-          </div>
         </>
       )}
     </div>
