@@ -394,31 +394,6 @@ export const demoAdapter = {
     return { user: { id: profile.id, email: profile.email }, profile }
   },
 
-  async signUp({ email, password, fullName }) {
-    const state = loadState()
-    const normalized = email.trim().toLowerCase()
-    if (state.profiles.some((p) => p.email.toLowerCase() === normalized)) {
-      throw new Error('Email này đã tồn tại.')
-    }
-    const newProfile = {
-      id: uuid(),
-      email: normalized,
-      full_name: fullName.trim(),
-      role: 'cashier',
-      is_active: false,
-      demo_password: password,
-      created_at: new Date().toISOString(),
-    }
-    state.profiles.push(newProfile)
-    saveState(state)
-    return {
-      user: { id: newProfile.id, email: newProfile.email },
-      profile: newProfile,
-      needsEmailConfirmation: false,
-      pendingActivation: true,
-    }
-  },
-
   async signOut() {
     localStorage.removeItem(AUTH_SESSION_KEY)
     notifyListeners('SIGNED_OUT')

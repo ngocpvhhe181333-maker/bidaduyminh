@@ -549,7 +549,7 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
             <div>
               <h3>Quản lý tài khoản nhân sự</h3>
               <p className="muted-sm">
-                Chỉ tài khoản đang hoạt động mới được truy cập dữ liệu. Nếu tự đăng ký ngoài, Admin cần bật &ldquo;Hoạt động&rdquo; tại đây.
+                Chỉ tài khoản đang hoạt động mới được truy cập dữ liệu. Admin tạo và quản lý tài khoản nhân sự tại đây.
               </p>
             </div>
             <button
@@ -998,7 +998,7 @@ export function AdminView({ currentProfile, tableTypes, tables, menuItems, onRef
               {!isDemoMode && (
                 <p className="muted-xs">
                   Chức năng tạo trực tiếp sử dụng Edge Function <code>admin-create-user</code> để giữ bảo mật (không đưa{' '}
-                  <code>service_role</code> vào trình duyệt). Nếu chưa deploy Edge Function, nhân viên có thể tự bấm Đăng ký ở màn hình đăng nhập rồi Admin kích hoạt tại đây.
+                  <code>service_role</code> vào trình duyệt). Nếu chưa deploy Edge Function, hãy tạo tài khoản trong Supabase Dashboard → Authentication → Users rồi phân quyền tại đây.
                 </p>
               )}
               <div className="modal-footer-actions">

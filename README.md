@@ -28,14 +28,14 @@ Mở địa chỉ Vite hiển thị trong terminal (thường là `http://localh
 3. Trong mục **Connect** của project, lấy **Project URL** và **publishable key**.
 4. Sao chép `.env.example` thành `.env.local`, rồi điền hai giá trị đó.
    Nếu đã kết nối Supabase qua Vercel Integration, Vercel tự thêm `NEXT_PUBLIC_SUPABASE_URL` và `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Ứng dụng cũng đọc được hai tên biến này; không cần tạo thêm biến `VITE_` trên Vercel.
-5. Đăng ký tài khoản của chủ quán bằng email của bạn. Mọi tài khoản tự đăng ký đều ở trạng thái chờ kích hoạt. Trong **SQL Editor**, thay email mẫu bên dưới bằng email vừa đăng ký rồi chạy lệnh để cấp quyền Admin:
+5. Trong **Authentication → Users** của Supabase, tạo tài khoản chủ quán. Trong **SQL Editor**, thay email mẫu bên dưới bằng email vừa tạo rồi chạy lệnh để cấp quyền Admin:
    ```sql
    UPDATE public.profiles
    SET role = 'admin', is_active = true
    WHERE email = 'email-chu-quan@example.com';
    ```
    Kiểm tra kết quả bằng `SELECT email, role, is_active FROM public.profiles;`. Sau đó đăng nhập lại. Chỉ người có quyền vào Supabase Dashboard mới nên chạy bước này.
-6. Tài khoản nhân viên tự đăng ký sẽ là Thu ngân chờ Admin kích hoạt trong tab **Quản trị → Tài khoản**.
+6. Vào **Authentication → Sign In / Providers → Email** và tắt **Allow new users to sign up**. Ứng dụng chỉ cho đăng nhập; tài khoản nhân viên được tạo qua Supabase Dashboard hoặc bởi Admin trong tab **Quản trị → Tài khoản**.
 7. *(Tùy chọn)* Để Admin tạo trực tiếp tài khoản nhân viên mới ngay trên web mà không lộ `service_role`, triển khai Edge Function [`supabase/functions/admin-create-user/index.ts`](./supabase/functions/admin-create-user/index.ts):
    ```bash
    supabase functions deploy admin-create-user

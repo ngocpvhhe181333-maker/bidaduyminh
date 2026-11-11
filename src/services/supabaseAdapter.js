@@ -101,52 +101,6 @@ export const supabaseAdapter = {
     return { user: data.user, profile }
   },
 
-  async signUp({ email, password, fullName }) {
-    const client = requireSupabase()
-    const { data, error } = await client.auth.signUp({
-      email: email.trim(),
-      password,
-      options: {
-        data: {
-          full_name: fullName.trim(),
-        },
-      },
-    })
-    if (error) throw formatError(error)
-
-    if (!data.session) {
-      return {
-        user: data.user,
-        profile: null,
-        needsEmailConfirmation: true,
-        pendingActivation: false,
-      }
-    }
-
-    const { data: profile } = await client
-      .from('profiles')
-      .select('*')
-      .eq('id', data.user.id)
-      .maybeSingle()
-
-    if (profile && !profile.is_active) {
-      await client.auth.signOut()
-      return {
-        user: data.user,
-        profile,
-        needsEmailConfirmation: false,
-        pendingActivation: true,
-      }
-    }
-
-    return {
-      user: data.user,
-      profile,
-      needsEmailConfirmation: false,
-      pendingActivation: false,
-    }
-  },
-
   async signOut() {
     const client = requireSupabase()
     const { error } = await client.auth.signOut()
