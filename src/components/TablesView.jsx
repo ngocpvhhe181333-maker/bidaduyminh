@@ -782,7 +782,6 @@ export function TablesView({
                   tableName={selectedSession.table_name_snapshot}
                   startedAt={selectedSession.started_at}
                   endedAt={selectedSession.ended_at}
-                  durationSeconds={selectedSessionPricing.durationSeconds}
                   billedMinutes={selectedSessionPricing.billedMinutes}
                   tableFee={selectedSessionPricing.tableFee}
                   items={(selectedSession.session_items || []).map((item) => ({

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { formatDateTime, formatDurationHms, formatMinutesReadable, formatVnd } from '../utils/format'
+import { formatDateTime, formatMinutesReadable, formatVnd } from '../utils/format'
 import { TransferQr } from './TransferQr'
 import { PrintIcon } from './Icons'
 import { shop } from '../config/shop'
 
-export function PaymentPreview({ tableName, startedAt, endedAt, durationSeconds, billedMinutes, tableFee, items, itemsFee, discountAmount, amountDue, paymentMethod, memo, note, busy, onBack, onConfirm }) {
+export function PaymentPreview({ tableName, startedAt, endedAt, billedMinutes, tableFee, items, itemsFee, discountAmount, amountDue, paymentMethod, memo, note, busy, onBack, onConfirm }) {
   const [readyKey, setReadyKey] = useState('')
   const receiptRef = useRef(null)
   const printElementsRef = useRef([])
@@ -63,7 +63,6 @@ export function PaymentPreview({ tableName, startedAt, endedAt, durationSeconds,
           <div><span>Loại đơn:</span><strong>{tableName || 'Bán lẻ'}</strong></div>
           {startedAt && <div><span>Giờ vào:</span><span>{formatDateTime(startedAt)}</span></div>}
           {endedAt && <div><span>Giờ kết thúc:</span><span>{formatDateTime(endedAt)}</span></div>}
-          {durationSeconds != null && <div><span>Thời lượng:</span><span>{formatDurationHms(durationSeconds)}</span></div>}
           {billedMinutes != null && <div><span>Thời gian tính tiền:</span><span>{formatMinutesReadable(billedMinutes)}</span></div>}
           <div><span>Phương thức:</span><strong>{paymentMethod === 'transfer' ? 'Chuyển khoản' : 'Tiền mặt'}</strong></div>
         </div>
