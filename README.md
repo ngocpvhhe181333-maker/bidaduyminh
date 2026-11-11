@@ -71,6 +71,11 @@ Sau khi chạy migration và bản Vercel mới được triển khai, mở ca r
 - Hủy hóa đơn sau thanh toán không tự hoàn tồn kho vì hàng có thể đã được phục vụ. Nếu hàng được trả lại thực tế, Admin chỉnh số lượng tồn trong **Quản trị → Thực đơn**.
 - Hóa đơn tạo trước migration không có giá vốn lịch sử. Báo cáo sẽ hiển thị **Chưa đủ dữ liệu** cho lãi nếu khoảng ngày chọn có các dòng món cũ đó; nhập giá mua hiện tại không thể suy ra giá mua cũ.
 
+## QR chuyển khoản
+
+- Chọn **Chuyển khoản** khi thanh toán bàn hoặc bán lẻ để hiện mã VietQR cho Techcombank (TCB), tài khoản `1999222299999`, chủ tài khoản **DONG DUY MINH**. Mã lấy đúng số tiền sau giảm giá và được tạo offline bằng thư viện `vietqr`, không cần API key.
+- Thu ngân kiểm tra tiền đã vào tài khoản rồi bấm xác nhận thanh toán. QR không tự xác nhận giao dịch ngân hàng.
+
 ## Lệnh hữu ích
 
 - `npm run build`: tạo bản triển khai trong `dist/`.

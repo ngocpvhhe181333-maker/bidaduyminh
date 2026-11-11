@@ -11,6 +11,7 @@ import { calculateTableFee, getEffectiveTablePricing } from '../utils/pricing'
 import { calculateDiscount } from '../utils/discount'
 import { playPaymentSuccessSound } from '../utils/paymentSound'
 import { DiscountFields } from './DiscountFields'
+import { TransferQr } from './TransferQr'
 import { CoffeeIcon, PlusIcon, SwapIcon } from './Icons'
 
 export function TablesView({
@@ -804,6 +805,8 @@ export function TablesView({
                         </button>
                       </div>
                     </div>
+
+                    {paymentMethod === 'transfer' && <TransferQr amount={tableAmountDue} memo={`BIDA BAN ${selectedSession.table_name_snapshot.match(/\d+/)?.[0] || ''}`} />}
 
                     <label className="field">
                       <span>Ghi chú hóa đơn (tùy chọn)</span>

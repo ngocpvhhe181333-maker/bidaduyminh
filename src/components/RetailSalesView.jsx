@@ -4,6 +4,7 @@ import { formatVnd } from '../utils/format'
 import { calculateDiscount } from '../utils/discount'
 import { playPaymentSuccessSound } from '../utils/paymentSound'
 import { DiscountFields } from './DiscountFields'
+import { TransferQr } from './TransferQr'
 
 export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvoiceCreated, onRefresh }) {
   const [cart, setCart] = useState({})
@@ -147,6 +148,8 @@ export function RetailSalesView({ menuItems, openShift, onOpenShiftModal, onInvo
                 disabled={busy} onClick={() => setPaymentMethod('transfer')}><strong>Chuyển khoản</strong><span>QR / Ngân hàng</span></button>
             </div>
           </div>
+
+          {paymentMethod === 'transfer' && <TransferQr amount={amountDue} memo="BIDA BAN LE" />}
 
           <label className="field">
             <span>Ghi chú hóa đơn (tùy chọn)</span>
