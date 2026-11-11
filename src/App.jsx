@@ -5,6 +5,7 @@ import { HeaderBar } from './components/HeaderBar'
 import { InvoiceModal } from './components/InvoiceModal'
 import { LoginPage } from './components/LoginPage'
 import { ReportsView } from './components/ReportsView'
+import { RetailSalesView } from './components/RetailSalesView'
 import { ShiftModal } from './components/ShiftModal'
 import { ShiftsInvoicesView } from './components/ShiftsInvoicesView'
 import { TablesView } from './components/TablesView'
@@ -184,6 +185,19 @@ function App() {
                   setActiveInvoice(inv)
                   setInvoicesVersion((v) => v + 1)
                 }}
+              />
+            )}
+
+            {safeTab === 'retail' && (
+              <RetailSalesView
+                menuItems={opsState.menuItems}
+                openShift={opsState.openShift}
+                onOpenShiftModal={() => setShiftModalMode('open')}
+                onInvoiceCreated={(invoice) => {
+                  setActiveInvoice(invoice)
+                  setInvoicesVersion((version) => version + 1)
+                }}
+                onRefresh={loadOperationalState}
               />
             )}
 

@@ -60,6 +60,7 @@ export function ReportsView() {
     let totalRevenue = 0
     let tableRevenue = 0
     let itemsRevenue = 0
+    let retailRevenue = 0
     let discountTotal = 0
     let cashRevenue = 0
     let transferRevenue = 0
@@ -83,6 +84,7 @@ export function ReportsView() {
       totalRevenue += inv.total_amount
       tableRevenue += inv.table_fee
       itemsRevenue += inv.items_fee
+      if (inv.sale_type === 'retail') retailRevenue += inv.total_amount
       discountTotal += inv.discount_amount
       if (inv.payment_method === 'cash') cashRevenue += inv.total_amount
       else transferRevenue += inv.total_amount
@@ -110,6 +112,8 @@ export function ReportsView() {
       dayRow.total += inv.total_amount
       if (inv.payment_method === 'cash') dayRow.cash += inv.total_amount
       else dayRow.transfer += inv.total_amount
+
+      if (inv.sale_type === 'retail' || !inv.table_id) continue
 
       if (!byTableMap[inv.table_id]) {
         byTableMap[inv.table_id] = {
@@ -159,6 +163,7 @@ export function ReportsView() {
       totalRevenue,
       tableRevenue,
       itemsRevenue,
+      retailRevenue,
       discountTotal,
       cashRevenue,
       transferRevenue,
@@ -211,6 +216,9 @@ export function ReportsView() {
           <strong className="kpi-big num">{formatVnd(report.tableRevenue)}</strong>
           <span className="muted-xs">
             Tiền món: <strong className="num">{formatVnd(report.itemsRevenue)}</strong>
+          </span>
+          <span className="muted-xs">
+            Trong đó bán lẻ: <strong className="num">{formatVnd(report.retailRevenue)}</strong>
           </span>
         </div>
         <div className="card kpi-card">

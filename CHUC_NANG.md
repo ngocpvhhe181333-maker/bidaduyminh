@@ -28,6 +28,7 @@
 - Admin quản lý danh sách món, giá bán và trạng thái còn bán/ngừng bán.
 - Thu ngân thêm hoặc bỏ món khỏi phiên chơi trước khi thanh toán.
 - Hóa đơn thể hiện riêng tiền giờ chơi, từng món và tổng tiền.
+- Khách không chơi bi-a vẫn có thể mua món qua tab **Bán lẻ**; đơn này không cần mở bàn, nhưng cần ca làm đang mở và được tính vào doanh thu ca.
 
 ### 4. Thanh toán và hóa đơn
 

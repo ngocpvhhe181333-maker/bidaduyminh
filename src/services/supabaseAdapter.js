@@ -300,6 +300,23 @@ export const supabaseAdapter = {
     return this.fetchInvoiceDetail(invoice.id)
   },
 
+  async checkoutRetailSale({ items, paymentMethod, note = '' }) {
+    const client = requireSupabase()
+    const { data: invoice, error } = await client.rpc('checkout_retail_sale', {
+      p_items: items.map(({ menuItemId, quantity }) => ({
+        menu_item_id: menuItemId,
+        quantity,
+      })),
+      p_payment_method: paymentMethod,
+      p_note: note,
+    })
+    if (error?.code === 'PGRST202') {
+      throw new Error('Chưa cập nhật Supabase. Hãy chạy file supabase/retail_sales_migration.sql trong SQL Editor.')
+    }
+    if (error) throw formatError(error)
+    return this.fetchInvoiceDetail(invoice.id)
+  },
+
   async fetchShifts() {
     const client = requireSupabase()
     const { data, error } = await client
@@ -332,7 +349,8 @@ export const supabaseAdapter = {
 
     if (startIso) query = query.gte('paid_at', startIso)
     if (endIso) query = query.lte('paid_at', endIso)
-    if (tableId && tableId !== 'all') query = query.eq('table_id', tableId)
+    if (tableId === 'retail') query = query.is('table_id', null)
+    else if (tableId && tableId !== 'all') query = query.eq('table_id', tableId)
     if (paymentMethod && paymentMethod !== 'all') query = query.eq('payment_method', paymentMethod)
     if (status && status !== 'all') query = query.eq('status', status)
 

@@ -159,7 +159,8 @@ export function ShiftsInvoicesView({
             <label className="field">
               <span>Bàn</span>
               <select value={tableId} onChange={(e) => setTableId(e.target.value)}>
-                <option value="all">Tất cả bàn</option>
+                <option value="all">Tất cả</option>
+                <option value="retail">Bán lẻ (không dùng bàn)</option>
                 {tables.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
@@ -223,7 +224,7 @@ export function ShiftsInvoicesView({
                       </td>
                       <td>{formatDateTime(inv.paid_at)}</td>
                       <td>{inv.table_name}</td>
-                      <td>{formatMinutesReadable(inv.billed_minutes)}</td>
+                      <td>{inv.sale_type === 'retail' ? '—' : formatMinutesReadable(inv.billed_minutes)}</td>
                       <td className="num">{formatVnd(inv.table_fee)}</td>
                       <td className="num">{formatVnd(inv.items_fee)}</td>
                       <td className="num">{inv.discount_amount > 0 ? `-${formatVnd(inv.discount_amount)}` : '—'}</td>

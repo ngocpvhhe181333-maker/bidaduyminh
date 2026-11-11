@@ -21,6 +21,7 @@ Mở địa chỉ Vite hiển thị trong terminal (thường là `http://localh
 
 1. Tạo một project tại [Supabase Dashboard](https://supabase.com/dashboard).
 2. Vào **SQL Editor** và chạy toàn bộ nội dung file [`supabase/schema.sql`](./supabase/schema.sql) để khởi tạo các bảng, ràng buộc chống mở trùng bàn/ca, hàm tính tiền giờ, các RPC nghiệp vụ và chính sách **Row Level Security (RLS)** cho Admin và Thu ngân (kèm sẵn 5 bàn và thực đơn mẫu).
+   Sau đó chạy [`supabase/retail_sales_migration.sql`](./supabase/retail_sales_migration.sql) để bật tính năng bán đồ ăn/uống cho khách không dùng bàn. Nếu bạn đã chạy `schema.sql` từ trước, **chỉ cần chạy file migration này**; dữ liệu và hóa đơn cũ được giữ lại.
 3. Trong mục **Connect** của project, lấy **Project URL** và **publishable key**.
 4. Sao chép `.env.example` thành `.env.local`, rồi điền hai giá trị đó.
    Nếu đã kết nối Supabase qua Vercel Integration, Vercel tự thêm `NEXT_PUBLIC_SUPABASE_URL` và `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Ứng dụng cũng đọc được hai tên biến này; không cần tạo thêm biến `VITE_` trên Vercel.
@@ -53,6 +54,10 @@ Biến có tiền tố `VITE_` được đưa vào mã chạy trên trình duy�
 5. Deploy. Khi đổi biến môi trường, triển khai lại để bản build mới nhận giá trị.
 
 File `vercel.json` giúp các đường dẫn trong ứng dụng React hoạt động khi mở trực tiếp hoặc tải lại trang.
+
+## Bán lẻ không dùng bàn
+
+Sau khi chạy migration và bản Vercel mới được triển khai, mở ca rồi vào tab **Bán lẻ**. Chọn món, số lượng và phương thức thanh toán; hóa đơn xuất hiện trong **Ca & Hóa đơn** với loại **Bán lẻ**. Tiền bán lẻ cộng vào doanh thu ca và báo cáo, nhưng không cộng vào số phiên chơi hay doanh thu giờ của bàn.
 
 ## Lệnh hữu ích
 

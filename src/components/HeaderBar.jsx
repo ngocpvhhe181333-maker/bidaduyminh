@@ -1,6 +1,6 @@
 import { isDemoMode } from '../services/api'
 import { formatVnd } from '../utils/format'
-import { BilliardIcon, ChartIcon, ClockIcon, LogOutIcon, ReceiptIcon, SettingsIcon } from './Icons'
+import { BilliardIcon, ChartIcon, ClockIcon, CoffeeIcon, LogOutIcon, ReceiptIcon, SettingsIcon } from './Icons'
 
 export function HeaderBar({
   profile,
@@ -14,6 +14,7 @@ export function HeaderBar({
 
   const tabs = [
     { id: 'tables', label: 'Bàn chơi (5)', icon: <BilliardIcon size={17} /> },
+    { id: 'retail', label: 'Bán lẻ', icon: <CoffeeIcon size={17} /> },
     { id: 'shifts', label: 'Ca & Hóa đơn', icon: <ReceiptIcon size={17} /> },
   ]
 

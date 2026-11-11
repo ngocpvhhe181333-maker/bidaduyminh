@@ -238,6 +238,7 @@ function createInitialState() {
       {
         id: sampleInvoiceId,
         invoice_code: 'HD-DEMO-0001',
+      sale_type: 'table',
         session_id: 'demo-session-old-1',
         shift_id: closedShiftId,
         table_id: 'table-4',
@@ -677,6 +678,7 @@ export const demoAdapter = {
     const invoice = {
       id: uuid(),
       invoice_code: `HD-${dateTag}-${seq}`,
+      sale_type: 'table',
       session_id: session.id,
       shift_id: openShift.id,
       table_id: session.table_id,
@@ -725,6 +727,73 @@ export const demoAdapter = {
     return enrichInvoice(state, invoice)
   },
 
+  async checkoutRetailSale({ items, paymentMethod, note = '' }) {
+    const state = loadState()
+    const user = requireStaff(state)
+    const openShift = state.shifts.find((shift) => shift.status === 'open')
+    if (!openShift) throw new Error('Chưa có ca làm đang mở. Vui lòng mở ca trước khi thu tiền.')
+    if (!['cash', 'transfer'].includes(paymentMethod)) throw new Error('Phương thức thanh toán không hợp lệ.')
+    if (!Array.isArray(items) || items.length === 0) throw new Error('Vui lòng chọn ít nhất một món.')
+
+    const lines = items.map(({ menuItemId, quantity }) => {
+      const menuItem = state.menuItems.find((item) => item.id === menuItemId && item.is_active)
+      if (!menuItem) throw new Error('Món đã ngừng bán hoặc không tồn tại.')
+      if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
+        throw new Error('Số lượng món phải từ 1 đến 99.')
+      }
+      return { menuItem, quantity }
+    })
+
+    const paidAt = new Date()
+    const itemsFee = lines.reduce((sum, { menuItem, quantity }) => sum + menuItem.price * quantity, 0)
+    const dateTag = paidAt.toISOString().slice(0, 10).replaceAll('-', '')
+    const seq = String(state.invoices.length + 1).padStart(4, '0')
+    const invoice = {
+      id: uuid(),
+      invoice_code: `HD-${dateTag}-${seq}`,
+      sale_type: 'retail',
+      session_id: null,
+      shift_id: openShift.id,
+      table_id: null,
+      table_name: 'Bán lẻ',
+      table_type_name: 'Không dùng bàn',
+      started_at: paidAt.toISOString(),
+      ended_at: paidAt.toISOString(),
+      duration_seconds: 0,
+      billed_minutes: 0,
+      hourly_rate_snapshot: 0,
+      rounding_minutes_snapshot: 1,
+      rounding_mode_snapshot: 'ceil',
+      min_minutes_snapshot: 0,
+      table_fee: 0,
+      items_fee: itemsFee,
+      discount_amount: 0,
+      total_amount: itemsFee,
+      payment_method: paymentMethod,
+      cashier_id: user.id,
+      cashier_name: user.full_name,
+      paid_at: paidAt.toISOString(),
+      status: 'paid',
+      note: note.trim(),
+    }
+
+    state.invoices.unshift(invoice)
+    for (const { menuItem, quantity } of lines) {
+      state.invoiceItems.push({
+        id: uuid(),
+        invoice_id: invoice.id,
+        menu_item_id: menuItem.id,
+        item_name: menuItem.name,
+        unit: menuItem.unit,
+        unit_price: menuItem.price,
+        quantity,
+        line_total: menuItem.price * quantity,
+      })
+    }
+    saveState(state)
+    return enrichInvoice(state, invoice)
+  },
+
   async fetchShifts() {
     const state = loadState()
     const user = requireStaff(state)
@@ -764,7 +833,8 @@ export const demoAdapter = {
         const paidMs = new Date(inv.paid_at).getTime()
         if (startMs && paidMs < startMs) return false
         if (endMs && paidMs > endMs) return false
-        if (tableId && tableId !== 'all' && inv.table_id !== tableId) return false
+        if (tableId === 'retail' && inv.table_id !== null) return false
+        if (tableId && tableId !== 'all' && tableId !== 'retail' && inv.table_id !== tableId) return false
         if (paymentMethod && paymentMethod !== 'all' && inv.payment_method !== paymentMethod) return false
         if (status && status !== 'all' && inv.status !== status) return false
         return true

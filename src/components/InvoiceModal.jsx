@@ -60,6 +60,7 @@ export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
 
   const items = invoice.invoice_items || []
   const adjustments = invoice.invoice_adjustments || []
+  const isRetail = invoice.sale_type === 'retail' || !invoice.session_id
 
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Chi tiết hóa đơn">
@@ -96,31 +97,21 @@ export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
 
             <div className="receipt-meta">
               <div>
-                <span>Bàn:</span>
-                <strong>
-                  {invoice.table_name} ({invoice.table_type_name})
-                </strong>
+                <span>{isRetail ? 'Loại đơn:' : 'Bàn:'}</span>
+                <strong>{isRetail ? 'Bán lẻ (không dùng bàn)' : `${invoice.table_name} (${invoice.table_type_name})`}</strong>
               </div>
               <div>
                 <span>Thu ngân:</span>
                 <strong>{invoice.cashier_name}</strong>
               </div>
-              <div>
-                <span>Giờ vào:</span>
-                <span>{formatDateTime(invoice.started_at)}</span>
-              </div>
-              <div>
-                <span>Giờ ra:</span>
-                <span>{formatDateTime(invoice.ended_at)}</span>
-              </div>
-              <div>
-                <span>Chơi thực tế:</span>
-                <span>{formatDurationHms(invoice.duration_seconds)}</span>
-              </div>
-              <div>
-                <span>Tính tiền:</span>
-                <span>{formatMinutesReadable(invoice.billed_minutes)}</span>
-              </div>
+              {!isRetail && (
+                <>
+                  <div><span>Giờ vào:</span><span>{formatDateTime(invoice.started_at)}</span></div>
+                  <div><span>Giờ ra:</span><span>{formatDateTime(invoice.ended_at)}</span></div>
+                  <div><span>Chơi thực tế:</span><span>{formatDurationHms(invoice.duration_seconds)}</span></div>
+                  <div><span>Tính tiền:</span><span>{formatMinutesReadable(invoice.billed_minutes)}</span></div>
+                </>
+              )}
               <div>
                 <span>Thanh toán:</span>
                 <strong>{getPaymentMethodLabel(invoice.payment_method)}</strong>
@@ -131,7 +122,7 @@ export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
               </div>
             </div>
 
-            <div className="receipt-section">
+            {!isRetail && <div className="receipt-section">
               <div className="receipt-section-title">1. Tiền giờ chơi</div>
               <div className="receipt-line">
                 <div>
@@ -149,10 +140,10 @@ export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
                 </div>
                 <strong className="num">{formatVnd(invoice.table_fee)}</strong>
               </div>
-            </div>
+            </div>}
 
             <div className="receipt-section">
-              <div className="receipt-section-title">2. Đồ uống &amp; Đồ ăn</div>
+              <div className="receipt-section-title">{isRetail ? 'Đồ uống & Đồ ăn' : '2. Đồ uống & Đồ ăn'}</div>
               {items.length === 0 ? (
                 <div className="receipt-empty">Không gọi món</div>
               ) : (
@@ -244,7 +235,7 @@ export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
 
                     {adjustMode === 'edit' && (
                       <>
-                        <label className="field">
+                        {!isRetail && <label className="field">
                           <span>Tiền giờ chơi (VNĐ)</span>
                           <input
                             type="number"
@@ -253,7 +244,7 @@ export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
                             value={tableFee}
                             onChange={(e) => setTableFee(e.target.value)}
                           />
-                        </label>
+                        </label>}
                         <label className="field">
                           <span>Tiền đồ uống / đồ ăn (VNĐ)</span>
                           <input
