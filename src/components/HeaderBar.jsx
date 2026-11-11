@@ -1,6 +1,7 @@
 import { isDemoMode } from '../services/api'
 import { formatVnd } from '../utils/format'
 import { BilliardIcon, ChartIcon, ClockIcon, CoffeeIcon, LogOutIcon, ReceiptIcon, SettingsIcon } from './Icons'
+import { shop } from '../config/shop'
 
 export function HeaderBar({
   profile,
@@ -32,7 +33,7 @@ export function HeaderBar({
               <BilliardIcon size={20} />
             </span>
             <div>
-              <div className="brand-name">Duy Minh Bi-a</div>
+              <div className="brand-name">{shop.name}</div>
               <div className="brand-sub">
                 {isDemoMode ? 'Chế độ Demo cục bộ' : 'Supabase Live'}
               </div>

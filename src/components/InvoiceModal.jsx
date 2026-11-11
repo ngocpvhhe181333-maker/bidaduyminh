@@ -14,6 +14,7 @@ import { calculateDiscount } from '../utils/discount'
 import { parseTransferNote, transferMemo } from '../utils/transferReference'
 import { DiscountFields } from './DiscountFields'
 import { TransferQr } from './TransferQr'
+import { shop } from '../config/shop'
 
 export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
   const [adjustMode, setAdjustMode] = useState(null) // 'discount' | 'edit' | 'void' | null
@@ -107,7 +108,9 @@ export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
           {/* Khu vực in hóa đơn */}
           <div className="receipt-sheet print-area">
             <div className="receipt-header">
-              <h2>DUY MINH BI-A</h2>
+              <h2>{shop.name}</h2>
+              <div className="receipt-shop-address">{shop.address}</div>
+              <div className="receipt-shop-hotline">Hotline: {shop.hotline}</div>
               <p>HÓA ĐƠN THANH TOÁN</p>
               <div className="receipt-code">Số: {invoice.invoice_code}</div>
               {invoice.status === 'voided' && (
@@ -216,7 +219,7 @@ export function InvoiceModal({ invoice, isAdmin, onClose, onInvoiceUpdated }) {
 
             {needsReceiptQr && <TransferQr amount={invoice.total_amount} memo={receiptMemo} onReceipt compact onGenerated={onQrGenerated} />}
 
-            <div className="receipt-footer">Cảm ơn quý khách &amp; Hẹn gặp lại!</div>
+            <div className="receipt-footer">{shop.thanks}</div>
           </div>
 
           {/* Khu vực điều chỉnh dành cho Admin & Lịch sử điều chỉnh (không in) */}

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api, isDemoMode } from '../services/api'
 import { BilliardIcon } from './Icons'
+import { shop } from '../config/shop'
 
 export function LoginPage({ onAuthenticated }) {
   const [mode, setMode] = useState('login')
@@ -61,7 +62,7 @@ export function LoginPage({ onAuthenticated }) {
             <BilliardIcon size={26} />
           </div>
           <div>
-            <h1>Duy Minh Bi-a</h1>
+            <h1>{shop.name}</h1>
             <p>Hệ thống quản lý 5 bàn, tính giờ &amp; thu ngân</p>
           </div>
         </div>

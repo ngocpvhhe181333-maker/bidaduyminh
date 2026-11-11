@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { formatDateTime, formatDurationHms, formatMinutesReadable, formatVnd } from '../utils/format'
 import { TransferQr } from './TransferQr'
 import { PrintIcon } from './Icons'
+import { shop } from '../config/shop'
 
 export function PaymentPreview({ tableName, startedAt, endedAt, durationSeconds, billedMinutes, tableFee, items, itemsFee, discountAmount, amountDue, paymentMethod, memo, note, busy, onBack, onConfirm }) {
   const [readyKey, setReadyKey] = useState('')
@@ -51,7 +52,9 @@ export function PaymentPreview({ tableName, startedAt, endedAt, durationSeconds,
 
       <div ref={receiptRef} className="receipt-sheet payment-preview-print">
         <div className="receipt-header">
-          <h2>DUY MINH BI-A</h2>
+          <h2>{shop.name}</h2>
+          <div className="receipt-shop-address">{shop.address}</div>
+          <div className="receipt-shop-hotline">Hotline: {shop.hotline}</div>
           <p>HÓA ĐƠN CHỜ THANH TOÁN</p>
           {needsQr && <div className="receipt-code">Tham chiếu: {memo}</div>}
         </div>
@@ -88,7 +91,7 @@ export function PaymentPreview({ tableName, startedAt, endedAt, durationSeconds,
         </div>
 
         {needsQr && <TransferQr amount={amountDue} memo={memo} compact onGenerated={onQrGenerated} />}
-        <div className="receipt-footer">Vui lòng thanh toán trước khi rời quán.</div>
+        <div className="receipt-footer">{shop.thanks}</div>
       </div>
 
       <div className="payment-preview-actions no-print">
