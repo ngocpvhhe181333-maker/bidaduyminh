@@ -66,11 +66,16 @@ export function ReportsView() {
     let transferRevenue = 0
     let goodsCost = 0
     let unknownCostCount = 0
+    const unknownCostInvoiceCodes = []
 
-    for (const inv of data.invoices) {
+    for (const inv of validInvoices) {
       for (const item of inv.invoice_items || []) {
-        if (item.line_cost == null) unknownCostCount += 1
-        else goodsCost += item.line_cost
+        if (item.line_cost == null) {
+          unknownCostCount += 1
+          if (inv.invoice_code && !unknownCostInvoiceCodes.includes(inv.invoice_code)) {
+            unknownCostInvoiceCodes.push(inv.invoice_code)
+          }
+        } else goodsCost += item.line_cost
       }
     }
     const byDayMap = {}
@@ -177,6 +182,7 @@ export function ReportsView() {
       transferRevenue,
       goodsCost,
       unknownCostCount,
+      unknownCostInvoiceCodes,
       grossProfit: totalRevenue - goodsCost,
       byDay,
       byTable,
@@ -261,7 +267,7 @@ export function ReportsView() {
           <div className="live-row live-total"><span>Lãi gộp</span><strong className="num">{report.unknownCostCount ? 'Chưa đủ dữ liệu' : formatVnd(report.grossProfit)}</strong></div>
         </div>
         {report.unknownCostCount > 0 && <p className="alert alert-warning" style={{ marginTop: '1rem' }}>
-          Có {report.unknownCostCount} dòng món chưa có giá vốn (thường là hóa đơn cũ hoặc món chưa nhập giá nhập). Hãy bổ sung giá nhập để các hóa đơn mới được tính lãi; hóa đơn cũ vẫn thiếu giá vốn gốc.
+          Có {report.unknownCostCount} dòng món trong hóa đơn hợp lệ chưa có giá vốn{report.unknownCostInvoiceCodes.length > 0 ? ` (${report.unknownCostInvoiceCodes.join(', ')})` : ''}. Hãy bổ sung giá nhập để các hóa đơn mới được tính lãi; hóa đơn cũ vẫn thiếu giá vốn gốc.
         </p>}
         <p className="muted-xs">Giá vốn được lưu khi bán hoặc xuất món; các hóa đơn trước khi bật tính năng tồn kho có thể thiếu giá vốn.</p>
       </div>
