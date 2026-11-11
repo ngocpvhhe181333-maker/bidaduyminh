@@ -282,11 +282,14 @@ export function ReportsView() {
 
       <div className="card">
         <h3>Lợi nhuận trong khoảng thời gian đã chọn</h3>
+        <p className="muted-sm" style={{ marginBottom: '0.9rem' }}>
+          Lãi gộp = doanh thu − giá vốn món đã bán. Lãi ròng = lãi gộp − chi phí vận hành.
+        </p>
         <div className="checkout-breakdown" style={{ maxWidth: 620 }}>
           <div className="live-row"><span>Doanh thu thực thu</span><strong className="num">{formatVnd(report.totalRevenue)}</strong></div>
-          <div className="live-row"><span>Giá vốn món đã bán/xuất kho</span><strong className="num">−{formatVnd(report.goodsCost)}</strong></div>
+          <div className="live-row"><span>Giá vốn món đã bán/xuất kho</span><strong className="num">{formatVnd(report.goodsCost)}</strong></div>
           <div className="live-row"><span>Lãi gộp</span><strong className="num">{report.unknownCostCount ? 'Chưa đủ dữ liệu' : formatVnd(report.grossProfit)}</strong></div>
-          <div className="live-row"><span>Chi phí vận hành</span><strong className="num">−{formatVnd(report.operatingExpenseTotal)}</strong></div>
+          <div className="live-row"><span>Chi phí vận hành</span><strong className="num">{formatVnd(report.operatingExpenseTotal)}</strong></div>
           <div className="live-row live-total"><span>Lãi ròng</span><strong className="num">{report.unknownCostCount ? 'Chưa đủ dữ liệu' : formatVnd(report.netProfit)}</strong></div>
         </div>
         {report.unknownCostCount > 0 && <p className="alert alert-warning" style={{ marginTop: '1rem' }}>
